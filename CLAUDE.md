@@ -150,6 +150,8 @@ pnpm dev:frontend
     && pm2 restart badminton-backend'
   ```
 
+  - ⚠️ **若本次改了 `backend/prisma/schema.prisma`（加/改列、表）**：上面的标准流程**不迁库**。必须**先**按 [`docs/deploy.md`](docs/deploy.md)「数据库结构变更」在服务器上迁 prod 库（`ssh aliyun`，用 `prisma db push --env=prod` 或服务器上的 mysql 客户端），**再**部署代码。本地 `db:push` 只改 dev 库、改不到线上；先上代码后迁库会让新查询撞上缺列、打挂线上。库口令只在服务器 `config.prod.yml`，勿写入任何入库文件。
+
 - **前端代码（`frontend/`）**：构建并上传小程序「开发版」（版本号自动递增）
 
   ```bash

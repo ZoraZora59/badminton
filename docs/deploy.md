@@ -47,6 +47,28 @@ ssh aliyun 'cd /www/wwwroot/badminton && pnpm install \
   && pm2 restart badminton-backend'
 ```
 
+## 数据库结构变更（schema 迁移 · 必读）
+
+> ⚠️ dev / prod 两套库分离：本地 `pnpm --filter @badminton/backend db:push` 读 `config.local.yml`，**只改 dev 库 `badminton_dev`（公网 www.zorazora.cn:3204）**；线上 `badminton` 库只监听内网 `127.0.0.1:3204`，本地连不到。
+> 上面「更新重新部署」标准流程**只 build + 重启，不建表/改列**。所以凡 `backend/prisma/schema.prisma` 有列/表变更，必须单独迁 prod 库。
+
+**铁律：先迁 prod 库 → 再部署新代码。** 加可空列等向后兼容改动，先迁库对正在运行的旧代码无害；反过来先上代码、库里缺列，新查询会直接打挂线上。
+
+**库口令只在服务器 `config/config.prod.yml`（gitignored），永远不要从本地连 prod、不要把口令写进任何入库文件或命令行历史。** 在服务器上迁：
+
+```bash
+# 方式 A（推荐）：Prisma 读服务器 config.prod.yml，幂等，列/索引命名与 schema 完全一致
+ssh aliyun 'cd /www/wwwroot/badminton/backend && node scripts/prisma.mjs db push --env=prod'
+
+# 方式 B：mysql 客户端做最小手术（明确的追加列/索引时用）
+#   ssh aliyun，进 backend，从 config.prod.yml 的 database.url 解析连接串，口令用 MYSQL_PWD 传入、勿打印；
+#   先查 information_schema 判存在（保证幂等），不存在再执行，例如：
+#   ALTER TABLE `Participant` ADD COLUMN `broughtBySignupId` INT NULL;
+#   CREATE INDEX `Participant_broughtBySignupId_idx` ON `Participant`(`broughtBySignupId`);
+```
+
+迁完再走「更新重新部署」。**收尾验证**：`/api/health` 返回 200；再用 Prisma 实查一次新列（`participant.findFirst({ select: { 新列: true } })`）不报错，确认生成的 client 与线上库已对齐。
+
 ## 小程序上线（待你在微信后台放行后一键完成）
 
 **已上传**：`node ci/upload.cjs` 已成功上传「开发版 0.1.0」到微信（IP 白名单已由用户关闭）。代码已指向线上 API。重新构建+上传：
