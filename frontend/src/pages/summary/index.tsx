@@ -98,7 +98,7 @@ export default function Summary() {
     >
       <View className="sc-rep">
         <View className="sc-rep__hero">
-          <Text className="sc-rep__brand">来打我呀 · 今日战报</Text>
+          <Text className="sc-rep__brand">羽毛球小助手</Text>
           <Text className="sc-rep__title">{act?.title ?? '今日球局'}</Text>
           {act ? (
             <Text className="sc-rep__date num">

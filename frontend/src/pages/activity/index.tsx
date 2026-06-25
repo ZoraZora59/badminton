@@ -49,7 +49,7 @@ export default function Activity() {
   });
 
   useShareAppMessage(() => ({
-    title: act ? `${act.title}｜${fmtMonthDay(act.startAt)} ${act.venue} · 点我报名` : '来打我呀 · 羽毛球组局',
+    title: act ? `${act.title}｜${fmtMonthDay(act.startAt)} ${act.venue} · 点我报名` : '羽毛球小助手',
     path: `/pages/activity/index?id=${id}`,
   }));
 
@@ -128,7 +128,7 @@ export default function Activity() {
     >
       <View className="sc-act">
         <View className="sc-act__hero">
-          <Text className="sc-act__brand">来打我呀 · 羽毛球组局</Text>
+          <Text className="sc-act__brand">羽毛球小助手</Text>
           <Text className="sc-act__title">{act.title}</Text>
           <Text className="sc-act__host">局长 {act.hostNickname} 邀你来打球</Text>
         </View>

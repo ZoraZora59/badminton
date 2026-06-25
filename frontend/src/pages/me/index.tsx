@@ -103,7 +103,7 @@ export default function Me() {
   };
   const showAbout = () => {
     Taro.showModal({
-      title: '关于「来打我呀」',
+      title: '关于「羽毛球小助手」',
       content: '一款专为羽毛球爱好者打造的组局小程序：约球、报名、分组、计分一站搞定。跨局战绩按微信账号汇总。',
       showCancel: false,
       confirmText: '好的',
@@ -218,7 +218,7 @@ export default function Me() {
           </View>
         </View>
 
-        <Text className="me__hint">头像与昵称使用微信授权，仅保存到「来打我呀」用于组局展示。</Text>
+        <Text className="me__hint">头像与昵称使用微信授权，仅保存到「羽毛球小助手」用于组局展示。</Text>
         <View className="me__pad" />
         </View>
       </ScrollView>

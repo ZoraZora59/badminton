@@ -50,7 +50,7 @@ function readLast() {
   } else {
     version = [lastP[0], lastP[1], lastP[2] + 1].join('.'); // 自动 bump patch
   }
-  const desc = process.argv[3] || `来打我呀 v${version}`;
+  const desc = process.argv[3] || `羽毛球小助手 v${version}`;
 
   const project = new ci.Project({
     appid: 'wx11ee60a7b6ec3bd9',

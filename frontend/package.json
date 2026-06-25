@@ -2,7 +2,7 @@
   "name": "@badminton/frontend",
   "version": "0.1.0",
   "private": true,
-  "description": "来打我呀 · 微信小程序前端（Taro + React + TS）",
+  "description": "羽毛球小助手 · 微信小程序前端（Taro + React + TS）",
   "scripts": {
     "dev:weapp": "taro build --type weapp --watch",
     "build:weapp": "taro build --type weapp",

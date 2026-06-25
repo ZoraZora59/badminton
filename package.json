@@ -2,7 +2,7 @@
   "name": "badminton-game",
   "version": "0.1.0",
   "private": true,
-  "description": "来打我呀 — 羽毛球组局微信小程序（约球 / 分队 / 记分）。TS 全栈单仓多工程。",
+  "description": "羽毛球小助手 — 羽毛球组局微信小程序（约球 / 分队 / 记分）。TS 全栈单仓多工程。",
   "packageManager": "pnpm@10.32.1",
   "engines": {
     "node": ">=20"

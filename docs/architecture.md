@@ -1,4 +1,4 @@
-# 来打我呀 · 系统架构与开发设计 v0.1
+# 羽毛球小助手 · 系统架构与开发设计 v0.1
 
 > 配套文档：[`product-plan-v0.1.md`](./product-plan-v0.1.md) · [`user-stories-v0.1.md`](./user-stories-v0.1.md) · 设计稿见 `design/`。
 > 本文是工程落地的权威记录：技术选型、目录、数据模型、鉴权、配置、API、验证策略。

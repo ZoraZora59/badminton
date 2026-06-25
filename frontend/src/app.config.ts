@@ -12,7 +12,7 @@ export default defineAppConfig({
     'pages/summary/index',
   ],
   window: {
-    navigationBarTitleText: '来打我呀',
+    navigationBarTitleText: '羽毛球小助手',
     navigationBarBackgroundColor: '#16A34A',
     navigationBarTextStyle: 'white',
     backgroundColor: '#F5F8F4',

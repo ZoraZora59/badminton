@@ -52,7 +52,7 @@ ssh aliyun 'cd /www/wwwroot/badminton && pnpm install \
 **已上传**：`node ci/upload.cjs` 已成功上传「开发版 0.1.0」到微信（IP 白名单已由用户关闭）。代码已指向线上 API。重新构建+上传：
 
 ```bash
-cd frontend && pnpm build:weapp && node ci/upload.cjs 0.1.0 "来打我呀 v0.1"
+cd frontend && pnpm build:weapp && node ci/upload.cjs 0.1.0 "羽毛球小助手 v0.1"
 ```
 
 > 注意：`@badminton/shared` 编译目标设为 **ES2017**，避免 `??`/`?.` 进入小程序包导致 WeChat 校验报「Unexpected token ?」；CI 上传 `setting.es6/es7=true` 兜底转译。

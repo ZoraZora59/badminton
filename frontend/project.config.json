@@ -1,7 +1,7 @@
 {
   "miniprogramRoot": "dist/",
   "projectname": "badminton",
-  "description": "来打我呀 · 羽毛球组局",
+  "description": "羽毛球小助手",
   "appid": "wx11ee60a7b6ec3bd9",
   "setting": {
     "urlCheck": false,
