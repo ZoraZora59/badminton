@@ -222,7 +222,8 @@
   /* ===== 分享底栏 ===== */
   &__footer {
     flex-shrink: 0;
-    padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
+    /* 底部常驻 tab 为 fixed，需为分享按钮预留底栏高度，避免被遮挡 */
+    padding: 14px 16px calc(18px + var(--tabbar-h, 56px) + env(safe-area-inset-bottom));
     background: var(--c-card);
     border-top: 1px solid var(--c-border-2);
   }
