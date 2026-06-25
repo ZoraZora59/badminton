@@ -5,7 +5,7 @@ import { type MatchVM, type ParticipantVM } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
 import { toastError } from '../../services/api';
-import { Avatar } from '../../components';
+import { Avatar, PageFrame } from '../../components';
 import './index.scss';
 
 /** 一队头像组（双打两人叠放，单打一人）+ 队名 */
@@ -41,7 +41,6 @@ export default function Scoring() {
       if (found) {
         setScoreA(found.scoreA ?? 0);
         setScoreB(found.scoreB ?? 0);
-        Taro.setNavigationBarTitle({ title: `场地 ${found.courtNo} · 计分` });
       }
     } catch (e) {
       toastError(e);
@@ -86,17 +85,21 @@ export default function Scoring() {
 
   if (!loaded) {
     return (
-      <View className="sc sc--center">
-        <Text className="sc__loading">加载中…</Text>
-      </View>
+      <PageFrame title="场地 · 计分" activeTab="home">
+        <View className="sc__state">
+          <Text className="sc__loading">加载中…</Text>
+        </View>
+      </PageFrame>
     );
   }
 
   if (!match) {
     return (
-      <View className="sc sc--center">
-        <Text className="sc__loading">未找到该场对局</Text>
-      </View>
+      <PageFrame title="场地 · 计分" activeTab="home">
+        <View className="sc__state">
+          <Text className="sc__loading">未找到该场对局</Text>
+        </View>
+      </PageFrame>
     );
   }
 
@@ -113,8 +116,21 @@ export default function Scoring() {
     </View>
   );
 
+  const footerNode = (
+    <View className="sc__actions">
+      <View className="sc__btn sc__btn--ghost" onClick={() => submit('rejudge')}>
+        改判
+      </View>
+      <View className="sc__btn sc__btn--primary" onClick={() => submit('score')}>
+        <Text className="sc__check">✓</Text>
+        确认胜负
+      </View>
+    </View>
+  );
+
   return (
-    <View className="sc">
+    <PageFrame title={`场地 ${match.courtNo} · 计分`} activeTab="home" footer={footerNode} footerBare>
+      <View className="sc__inner">
       {/* 大字比分区 */}
       <View className="sc__score-card">
         <View className="sc__team">
@@ -174,17 +190,7 @@ export default function Scoring() {
       )}
 
       {tie ? <Text className="sc__hint">比分不能相同，需分出胜负</Text> : null}
-
-      {/* 底部操作 */}
-      <View className="sc__actions">
-        <View className="sc__btn sc__btn--ghost" onClick={() => submit('rejudge')}>
-          改判
-        </View>
-        <View className="sc__btn sc__btn--primary" onClick={() => submit('score')}>
-          <Text className="sc__check">✓</Text>
-          确认胜负
-        </View>
       </View>
-    </View>
+    </PageFrame>
   );
 }

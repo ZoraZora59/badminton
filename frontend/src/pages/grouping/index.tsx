@@ -12,7 +12,7 @@ import {
 } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { toastError } from '../../services/api';
-import { Avatar, Tag, PrimaryButton, Empty } from '../../components';
+import { Avatar, Tag, PrimaryButton, Empty, PageFrame } from '../../components';
 import './index.scss';
 
 // 与建局页「场地数」上限保持一致（1-12），避免 picker indexOf 越界
@@ -239,23 +239,65 @@ export default function Grouping() {
     </View>
   );
 
+  const barNode = (
+    <View className="gp__bar">
+      {step > 1 && step < 5 ? (
+        <View className="gp__bar-l">
+          <PrimaryButton text="上一步" variant="outline" onClick={() => goStep(step - 1)} />
+        </View>
+      ) : null}
+
+      {step === 1 ? (
+        <View className="gp__bar-r">
+          <PrimaryButton
+            text={`下一步 · 已选 ${selectedList.length} 人`}
+            onClick={() =>
+              canLeaveStep1
+                ? setStep(2)
+                : Taro.showToast({ title: '至少选 2 人才能开始分组', icon: 'none' })
+            }
+          />
+        </View>
+      ) : null}
+
+      {step === 2 || step === 3 ? (
+        <View className="gp__bar-r">
+          <PrimaryButton text="下一步" onClick={() => setStep(step + 1)} />
+        </View>
+      ) : null}
+
+      {step === 4 ? (
+        <View className="gp__bar-r">
+          <PrimaryButton text={generating ? '生成中…' : '生成赛程'} disabled={generating} onClick={onGenerate} />
+        </View>
+      ) : null}
+
+      {step === 5 ? (
+        <>
+          <View className="gp__bar-l">
+            <PrimaryButton text={generating ? '重排中…' : '重新生成'} variant="outline" onClick={onRegenerate} />
+          </View>
+          <View className="gp__bar-r">
+            <PrimaryButton text={confirming ? '提交中…' : '确认开打'} onClick={onConfirm} disabled={confirming} />
+          </View>
+        </>
+      ) : null}
+    </View>
+  );
+
   if (!loaded) {
     return (
-      <View className="gp">
-        {stepBar}
+      <PageFrame title="分组排兵" activeTab="home" subHeader={stepBar}>
         <View className="gp__loading">
           <Empty text="加载参赛名单…" />
         </View>
-      </View>
+      </PageFrame>
     );
   }
 
   return (
-    <View className="gp">
-      {stepBar}
-
-      <ScrollView scrollY className="gp__scroll">
-        <View className="gp__inner">
+    <PageFrame title="分组排兵" activeTab="home" subHeader={stepBar} footer={barNode}>
+      <View className="gp__inner">
           {/* ===== 步骤 1：选人 ===== */}
           {step === 1 ? (
             participants.length === 0 ? (
@@ -506,52 +548,6 @@ export default function Grouping() {
 
           <View className="gp__scroll-pad" />
         </View>
-      </ScrollView>
-
-      {/* ===== 底部操作区（随步骤切换）===== */}
-      <View className="gp__bar">
-        {step > 1 && step < 5 ? (
-          <View className="gp__bar-l">
-            <PrimaryButton text="上一步" variant="outline" onClick={() => goStep(step - 1)} />
-          </View>
-        ) : null}
-
-        {step === 1 ? (
-          <View className="gp__bar-r">
-            <PrimaryButton
-              text={`下一步 · 已选 ${selectedList.length} 人`}
-              onClick={() =>
-                canLeaveStep1
-                  ? setStep(2)
-                  : Taro.showToast({ title: '至少选 2 人才能开始分组', icon: 'none' })
-              }
-            />
-          </View>
-        ) : null}
-
-        {step === 2 || step === 3 ? (
-          <View className="gp__bar-r">
-            <PrimaryButton text="下一步" onClick={() => setStep(step + 1)} />
-          </View>
-        ) : null}
-
-        {step === 4 ? (
-          <View className="gp__bar-r">
-            <PrimaryButton text={generating ? '生成中…' : '生成赛程'} disabled={generating} onClick={onGenerate} />
-          </View>
-        ) : null}
-
-        {step === 5 ? (
-          <>
-            <View className="gp__bar-l">
-              <PrimaryButton text={generating ? '重排中…' : '重新生成'} variant="outline" onClick={onRegenerate} />
-            </View>
-            <View className="gp__bar-r">
-              <PrimaryButton text={confirming ? '提交中…' : '确认开打'} onClick={onConfirm} disabled={confirming} />
-            </View>
-          </>
-        ) : null}
-      </View>
-    </View>
+    </PageFrame>
   );
 }

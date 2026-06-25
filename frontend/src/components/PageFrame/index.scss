@@ -1,0 +1,74 @@
+/* 全站统一页面框架：顶部小 header + 主体 + 底部操作区 + 常驻 tab */
+.pf {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--c-bg);
+
+  /* ===== 顶部小 header（绿色，篇幅小、各页一致）===== */
+  &__header {
+    flex-shrink: 0;
+    background: var(--grad-header);
+  }
+  &__statusbar {
+    height: env(safe-area-inset-top);
+    min-height: 20px;
+  }
+  &__bar {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+  }
+  &__back,
+  &__slot {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  &__slot--right {
+    justify-content: flex-end;
+    padding-right: 6px;
+  }
+  &__back-arrow {
+    font-size: 30px;
+    line-height: 1;
+    color: #fff;
+  }
+  &__title {
+    flex: 1;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* ===== 次级头部（步骤条/轮次切换等，固定不滚动）===== */
+  &__subheader {
+    flex-shrink: 0;
+  }
+
+  /* ===== 可滚动主体 ===== */
+  &__body {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* ===== 底部操作区（浮在常驻 tab 上方）===== */
+  &__footer {
+    flex-shrink: 0;
+    padding: 12px 16px;
+    background: var(--c-card);
+    border-top: 1px solid var(--c-border-2);
+  }
+  &__footer--bare {
+    background: var(--c-bg);
+    border-top: none;
+  }
+}

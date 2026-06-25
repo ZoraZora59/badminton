@@ -1,0 +1,6 @@
+/*
+ * 微信自定义 tabBar 是「组件」，默认 styleIsolation: isolated，app.wxss / common.wxss
+ * 里的 .tbar 全局样式不会渗透进来。组件自身 wxss 一定生效，故在此 @import 共享样式，
+ * sass 会把规则内联进 custom-tab-bar 自己的 wxss。
+ */
+@import '../components/TabBar/index.scss';

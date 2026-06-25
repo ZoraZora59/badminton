@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import Taro, { useRouter, useDidShow } from '@tarojs/taro';
 import {
   SignupStatus,
@@ -13,7 +13,7 @@ import {
 import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
 import { toastError } from '../../services/api';
-import { Avatar, Tag, Empty, LevelSheet } from '../../components';
+import { Avatar, Tag, Empty, LevelSheet, PageFrame } from '../../components';
 import './index.scss';
 
 /** 本地签到草稿：以 signupId 为键，记录是否实到 + 本场水平（覆盖默认） */
@@ -214,20 +214,42 @@ export default function Checkin() {
   const sheetSignup = sheetFor != null ? signups.find((s) => s.id === sheetFor) : undefined;
   const empty = signups.length === 0 && guests.length === 0;
 
+  const footerNode = (
+    <View
+      className={`ck__go ${submitting || goCount === 0 ? 'ck__go--disabled' : ''}`}
+      onClick={confirm}
+    >
+      确认参赛 {goCount} 人 · 去分组 →
+    </View>
+  );
+  const overlayNode = (
+    <LevelSheetLazy
+      visible={sheetFor != null}
+      value={sheetSignup ? draft[sheetSignup.id]?.level ?? DEFAULT_LEVEL : DEFAULT_LEVEL}
+      signup={sheetSignup}
+      onConfirm={setLevel}
+      onClose={() => setSheetFor(null)}
+    />
+  );
+
   if (!loaded) {
     return (
-      <View className="ck">
+      <PageFrame title="签到 · 确定参赛" activeTab="home">
         <View className="ck__loading">
           <Empty text="加载中…" />
         </View>
-      </View>
+      </PageFrame>
     );
   }
 
   return (
-    <View className="ck">
-      <ScrollView scrollY className="ck__body">
-        <View className="ck__inner">
+    <PageFrame
+      title="签到 · 确定参赛"
+      activeTab="home"
+      footer={footerNode}
+      overlay={overlayNode}
+    >
+      <View className="ck__inner">
         <View className="ck__head">
           <Text className="ck__count">
             已到 <Text className="ck__count-n num">{goCount}</Text> / {roster.length + guests.length}
@@ -264,25 +286,7 @@ export default function Checkin() {
         )}
         <View className="ck__pad" />
         </View>
-      </ScrollView>
-
-      <View className="ck__footer">
-        <View
-          className={`ck__go ${submitting || goCount === 0 ? 'ck__go--disabled' : ''}`}
-          onClick={confirm}
-        >
-          确认参赛 {goCount} 人 · 去分组 →
-        </View>
-      </View>
-
-      <LevelSheetLazy
-        visible={sheetFor != null}
-        value={sheetSignup ? draft[sheetSignup.id]?.level ?? DEFAULT_LEVEL : DEFAULT_LEVEL}
-        signup={sheetSignup}
-        onConfirm={setLevel}
-        onClose={() => setSheetFor(null)}
-      />
-    </View>
+    </PageFrame>
   );
 }
 

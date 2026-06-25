@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { View, Text } from '@tarojs/components';
+import { View, Text, Button } from '@tarojs/components';
 import Taro, { useRouter, useDidShow, useShareAppMessage } from '@tarojs/taro';
 import {
   ActivityStatus,
@@ -11,7 +11,7 @@ import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
 import { useUser } from '../../store/user';
 import { toastError } from '../../services/api';
-import { Avatar, Tag, PrimaryButton, Empty, ShareCard, Icon } from '../../components';
+import { Avatar, Tag, PrimaryButton, Empty, ShareCard, Icon, PageFrame } from '../../components';
 import { fmtRange, fmtMonthDay, cleanRemark, playTypeText, modeText } from '../../utils/format';
 import './index.scss';
 
@@ -70,14 +70,27 @@ export default function Activity() {
     [busy, load],
   );
 
+  /** 取消球局是不可逆操作，先二次确认再执行，避免误触 */
+  const confirmCancel = useCallback(async () => {
+    if (busy) return;
+    const res = await Taro.showModal({
+      title: '取消球局',
+      content: '取消后球局立即关闭，已报名的球友会看到「球局已取消」，且无法恢复。确定取消吗？',
+      cancelText: '再想想',
+      confirmText: '取消球局',
+      confirmColor: '#E64340',
+    });
+    if (!res.confirm) return;
+    run(() => api.cancelActivity(id));
+  }, [busy, run, id]);
+
   if (!act) {
     return (
-      <View className="act">
-        <View className="act__statusbar" />
+      <PageFrame title="活动详情" activeTab="home">
         <View className="act__loading">
           <Empty text="加载中…" />
         </View>
-      </View>
+      </PageFrame>
     );
   }
 
@@ -100,21 +113,60 @@ export default function Activity() {
   else if (full) badge = '已满员';
   const heroBadge = isHost ? `${badge} · 局长是你` : badge;
 
-  return (
-    <View className="act">
-      {/* ===== 绿色 Hero ===== */}
-      <View className="act__hero">
-        <View className="act__hero-blob" />
-        <View className="act__statusbar" />
-        <View className="act__nav">
-          <View className="act__back" onClick={() => Taro.navigateBack()}>
-            <Text className="act__back-arrow">‹</Text>
-          </View>
-        </View>
+  const actionsNode = isHost ? (
+    <HostActions act={act} id={id} busy={busy} onCancel={confirmCancel} />
+  ) : (
+    <GuestActions act={act} mine={mine} full={full} busy={busy} run={run} id={id} />
+  );
 
-        <View className="act__hero-body">
+  const shareOverlay = (
+    <ShareCard
+      visible={shareOpen}
+      onClose={() => setShareOpen(false)}
+      forwardLabel="转发给球友 · 召集开打"
+      tip="转发到群，球友点开卡片即可报名"
+    >
+      <View className="sc-act">
+        <View className="sc-act__hero">
+          <Text className="sc-act__brand">来打我呀 · 羽毛球组局</Text>
+          <Text className="sc-act__title">{act.title}</Text>
+          <Text className="sc-act__host">局长 {act.hostNickname} 邀你来打球</Text>
+        </View>
+        <View className="sc-act__body">
+          <View className="sc-act__row">
+            <Icon name="clock" size={16} color="#16a34a" />
+            <Text className="sc-act__row-txt num">{fmtRange(act.startAt, act.endAt)}</Text>
+          </View>
+          <View className="sc-act__row">
+            <Icon name="pin" size={16} color="#16a34a" />
+            <Text className="sc-act__row-txt">
+              {act.venue} · {act.courtCount} 片场地
+            </Text>
+          </View>
+          <View className="sc-act__count">
+            <Text className="sc-act__count-n num">{act.signedUpCount}</Text>
+            <Text className="sc-act__count-cap num">/ {act.capacity} 人已报名</Text>
+          </View>
+          {/* 预览里的主 CTA 也走转发：点它等同底部「转发给球友」，避免按钮无反应 */}
+          <Button
+            className="sc-act__cta"
+            openType="share"
+            hoverClass="none"
+            onClick={() => setShareOpen(false)}
+          >
+            <Text className="sc-act__cta-txt">点我报名 · 加入球局</Text>
+          </Button>
+        </View>
+      </View>
+    </ShareCard>
+  );
+
+  return (
+    <PageFrame title={act.title} activeTab="home" footer={actionsNode} footerBare overlay={shareOverlay}>
+      <View className="act__body">
+        {/* 活动信息卡（状态 + 时间/地点/玩法，下沉自原绿色 Hero）*/}
+        <View className="act__info">
           <View className="act__badge">{heroBadge}</View>
-          <Text className="act__title">{act.title}</Text>
           <View className="act__meta">
             <View className="act__meta-row">
               <Icon name="clock" size={15} color="rgba(255,255,255,0.92)" />
@@ -135,10 +187,7 @@ export default function Activity() {
             </View>
           </View>
         </View>
-      </View>
 
-      {/* ===== 白卡 · 三类名单头像墙 ===== */}
-      <View className="act__body">
         <View className="card">
           <View className="card__head">
             <Text className="card__title">报名名单</Text>
@@ -174,55 +223,7 @@ export default function Activity() {
         ) : null}
       </View>
 
-      {/* ===== 底部操作区 ===== */}
-      <View className="act__actions">
-        {isHost ? (
-          <HostActions
-            act={act}
-            id={id}
-            busy={busy}
-            onCancel={() => run(() => api.cancelActivity(id))}
-          />
-        ) : (
-          <GuestActions act={act} mine={mine} full={full} busy={busy} run={run} id={id} />
-        )}
-      </View>
-
-      {/* ===== 分享卡预览弹层 ===== */}
-      <ShareCard
-        visible={shareOpen}
-        onClose={() => setShareOpen(false)}
-        forwardLabel="转发给球友 · 召集开打"
-        tip="转发到群，球友点开卡片即可报名"
-      >
-        <View className="sc-act">
-          <View className="sc-act__hero">
-            <Text className="sc-act__brand">来打我呀 · 羽毛球组局</Text>
-            <Text className="sc-act__title">{act.title}</Text>
-            <Text className="sc-act__host">局长 {act.hostNickname} 邀你来打球</Text>
-          </View>
-          <View className="sc-act__body">
-            <View className="sc-act__row">
-              <Icon name="clock" size={16} color="#16a34a" />
-              <Text className="sc-act__row-txt num">{fmtRange(act.startAt, act.endAt)}</Text>
-            </View>
-            <View className="sc-act__row">
-              <Icon name="pin" size={16} color="#16a34a" />
-              <Text className="sc-act__row-txt">
-                {act.venue} · {act.courtCount} 片场地
-              </Text>
-            </View>
-            <View className="sc-act__count">
-              <Text className="sc-act__count-n num">{act.signedUpCount}</Text>
-              <Text className="sc-act__count-cap num">/ {act.capacity} 人已报名</Text>
-            </View>
-            <View className="sc-act__cta">
-              <Text className="sc-act__cta-txt">点我报名 · 加入球局</Text>
-            </View>
-          </View>
-        </View>
-      </ShareCard>
-    </View>
+    </PageFrame>
   );
 }
 

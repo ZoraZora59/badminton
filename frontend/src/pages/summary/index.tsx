@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import Taro, { useRouter, useDidShow, useShareAppMessage } from '@tarojs/taro';
 import { ActivityStatus, GroupMode, type ActivityVM, type SummaryVM, type TodayRankRowVM } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { toastError } from '../../services/api';
-import { Avatar, Empty, PrimaryButton, ShareCard, Icon } from '../../components';
+import { Avatar, Empty, PrimaryButton, ShareCard, Icon, PageFrame } from '../../components';
 import { fmtMonthDay, fmtWeekday } from '../../utils/format';
 import './index.scss';
 
@@ -71,10 +71,74 @@ export default function Summary() {
     }
   };
 
+  const footerNode = (
+    <>
+      <View
+        className="summary__share bm-btn bm-btn--solid bm-btn--block"
+        onClick={() => setShareOpen(true)}
+      >
+        <Icon name="share" size={16} color="#ffffff" />
+        <Text className="summary__share-txt">生成战报分享卡</Text>
+      </View>
+      <View className="summary__foot-gap" />
+      {act?.status === ActivityStatus.FINISHED ? (
+        <PrimaryButton text="返回主页" variant="outline" onClick={goHome} />
+      ) : (
+        <PrimaryButton text="结束活动" variant="outline" disabled={finishing} onClick={onFinish} />
+      )}
+    </>
+  );
+
+  const overlayNode = (
+    <ShareCard
+      visible={shareOpen}
+      onClose={() => setShareOpen(false)}
+      forwardLabel="晒战报到群"
+      tip="转发战报，约下一场"
+    >
+      <View className="sc-rep">
+        <View className="sc-rep__hero">
+          <Text className="sc-rep__brand">来打我呀 · 今日战报</Text>
+          <Text className="sc-rep__title">{act?.title ?? '今日球局'}</Text>
+          {act ? (
+            <Text className="sc-rep__date num">
+              {fmtMonthDay(act.startAt)} {fmtWeekday(act.startAt)} · {modeLabel}
+            </Text>
+          ) : null}
+          {mvp ? (
+            <View className="sc-rep__mvp">
+              <Avatar name={mvp.displayName} src={mvp.avatarUrl ?? undefined} size={40} ring />
+              <View className="sc-rep__mvp-info">
+                <Text className="sc-rep__mvp-tag">🏆 本场 MVP</Text>
+                <Text className="sc-rep__mvp-name">{mvp.displayName}</Text>
+              </View>
+              <Text className="sc-rep__mvp-score score">
+                {mvp.wins}胜 · +{mvp.points}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        <View className="sc-rep__list">
+          <Text className="sc-rep__head">今日榜 TOP {top3.length}</Text>
+          {top3.length === 0 ? (
+            <Text className="sc-rep__head">本场暂无成绩</Text>
+          ) : (
+            top3.map((r) => (
+              <View key={r.participantId} className="sc-rep__row">
+                <Text className={`sc-rep__rank score ${r.rank === 1 ? 'sc-rep__rank--first' : ''}`}>{r.rank}</Text>
+                <Text className="sc-rep__name">{r.displayName}</Text>
+                <Text className="sc-rep__val score">{rankValue(r)}</Text>
+              </View>
+            ))
+          )}
+        </View>
+      </View>
+    </ShareCard>
+  );
+
   return (
-    <View className="summary">
-      <ScrollView scrollY className="summary__scroll">
-        <View className="summary__inner">
+    <PageFrame title="本场结算" activeTab="home" footer={footerNode} overlay={overlayNode}>
+      <View className="summary__inner">
           {/* MVP 卡 */}
           {mvp ? (
             <View className="mvp">
@@ -122,71 +186,7 @@ export default function Summary() {
               ))}
             </View>
           )}
-        </View>
-      </ScrollView>
-
-      {/* 底部操作 */}
-      <View className="summary__foot">
-        <View
-          className="summary__share bm-btn bm-btn--solid bm-btn--block"
-          onClick={() => setShareOpen(true)}
-        >
-          <Icon name="share" size={16} color="#ffffff" />
-          <Text className="summary__share-txt">生成战报分享卡</Text>
-        </View>
-        <View className="summary__foot-gap" />
-        {act?.status === ActivityStatus.FINISHED ? (
-          <PrimaryButton text="返回主页" variant="outline" onClick={goHome} />
-        ) : (
-          <PrimaryButton text="结束活动" variant="outline" disabled={finishing} onClick={onFinish} />
-        )}
       </View>
-
-      {/* 战报分享卡预览 */}
-      <ShareCard
-        visible={shareOpen}
-        onClose={() => setShareOpen(false)}
-        forwardLabel="晒战报到群"
-        tip="转发战报，约下一场"
-      >
-        <View className="sc-rep">
-          <View className="sc-rep__hero">
-            <Text className="sc-rep__brand">来打我呀 · 今日战报</Text>
-            <Text className="sc-rep__title">{act?.title ?? '今日球局'}</Text>
-            {act ? (
-              <Text className="sc-rep__date num">
-                {fmtMonthDay(act.startAt)} {fmtWeekday(act.startAt)} · {modeLabel}
-              </Text>
-            ) : null}
-            {mvp ? (
-              <View className="sc-rep__mvp">
-                <Avatar name={mvp.displayName} src={mvp.avatarUrl ?? undefined} size={40} ring />
-                <View className="sc-rep__mvp-info">
-                  <Text className="sc-rep__mvp-tag">🏆 本场 MVP</Text>
-                  <Text className="sc-rep__mvp-name">{mvp.displayName}</Text>
-                </View>
-                <Text className="sc-rep__mvp-score score">
-                  {mvp.wins}胜 · +{mvp.points}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-          <View className="sc-rep__list">
-            <Text className="sc-rep__head">今日榜 TOP {top3.length}</Text>
-            {top3.length === 0 ? (
-              <Text className="sc-rep__head">本场暂无成绩</Text>
-            ) : (
-              top3.map((r) => (
-                <View key={r.participantId} className="sc-rep__row">
-                  <Text className={`sc-rep__rank score ${r.rank === 1 ? 'sc-rep__rank--first' : ''}`}>{r.rank}</Text>
-                  <Text className="sc-rep__name">{r.displayName}</Text>
-                  <Text className="sc-rep__val score">{rankValue(r)}</Text>
-                </View>
-              ))
-            )}
-          </View>
-        </View>
-      </ShareCard>
-    </View>
+    </PageFrame>
   );
 }

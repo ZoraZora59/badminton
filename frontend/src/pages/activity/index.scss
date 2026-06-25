@@ -1,60 +1,17 @@
 .act {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--c-bg);
-
-  &__statusbar {
-    height: env(safe-area-inset-top);
-    min-height: 20px;
-  }
   &__loading {
-    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding-top: 80px;
+    padding: 80px 0;
   }
 
-  /* ===== Hero ===== */
-  &__hero {
-    position: relative;
+  /* ===== 活动信息卡（绿色，承接原 Hero 的信息罩层，下沉进主体）===== */
+  &__info {
     background: linear-gradient(150deg, var(--c-primary), var(--c-primary-deep));
-    padding-bottom: 22px;
+    border-radius: var(--radius-card);
+    padding: 16px;
     overflow: hidden;
-  }
-  &__hero-blob {
-    position: absolute;
-    right: -26px;
-    top: -10px;
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    background: rgba(215, 242, 107, 0.16);
-  }
-  &__nav {
-    position: relative;
-    height: 34px;
-    display: flex;
-    align-items: center;
-    padding: 0 14px;
-  }
-  &__back {
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  &__back-arrow {
-    color: #fff;
-    font-size: 26px;
-    line-height: 1;
-    font-weight: 500;
-  }
-  &__hero-body {
-    position: relative;
-    padding: 6px 20px 0;
   }
   &__badge {
     display: inline-block;
@@ -95,23 +52,12 @@
 
   /* ===== Body ===== */
   &__body {
-    flex: 1;
-    margin-top: -12px;
-    background: var(--c-bg);
-    border-radius: 18px 18px 0 0;
     padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;
   }
 
-  /* ===== 底部操作区 ===== */
-  &__actions {
-    position: sticky;
-    bottom: 0;
-    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-    background: var(--c-bg);
-  }
   &__bar {
     display: flex;
     align-items: center;

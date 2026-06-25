@@ -1,3 +1,3 @@
 export default definePageConfig({
-  navigationBarTitleText: '发起活动',
+  navigationStyle: 'custom',
 });

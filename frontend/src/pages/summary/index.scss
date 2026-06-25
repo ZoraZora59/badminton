@@ -1,13 +1,4 @@
 .summary {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background: var(--c-bg);
-
-  &__scroll {
-    flex: 1;
-    min-height: 0;
-  }
   &__inner {
     padding: 16px 16px 24px;
     display: flex;
@@ -32,13 +23,7 @@
     color: var(--c-text-4);
   }
 
-  /* 底部固定操作区 */
-  &__foot {
-    flex-shrink: 0;
-    background: var(--c-card);
-    border-top: 1px solid var(--c-border-2);
-    padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
-  }
+  /* 底部固定操作区（容器由 PageFrame footer 提供） */
   &__foot-gap {
     height: 10px;
   }

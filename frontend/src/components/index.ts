@@ -6,3 +6,6 @@ export { default as LevelSheet } from './LevelSheet';
 export { default as ShareCard } from './ShareCard';
 export { default as Icon } from './Icon';
 export type { IconName } from './Icon';
+export { default as BottomTab } from './BottomTab';
+export type { TabKey } from './BottomTab';
+export { default as PageFrame } from './PageFrame';

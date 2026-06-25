@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import Taro, { useRouter, useDidShow } from '@tarojs/taro';
 import {
   MatchStatus,
@@ -11,7 +11,7 @@ import {
 } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { toastError } from '../../services/api';
-import { Avatar, Tag, PrimaryButton, Empty } from '../../components';
+import { Avatar, Tag, PrimaryButton, Empty, PageFrame } from '../../components';
 import './index.scss';
 
 export default function Board() {
@@ -50,11 +50,13 @@ export default function Board() {
 
   if (!board) {
     return (
-      <View className="board">
-        <View className="board__loading">
-          <Text className="board__loading-txt">加载中…</Text>
+      <PageFrame title="对阵看板" activeTab="home">
+        <View className="board">
+          <View className="board__loading">
+            <Text className="board__loading-txt">加载中…</Text>
+          </View>
         </View>
-      </View>
+      </PageFrame>
     );
   }
 
@@ -119,9 +121,23 @@ export default function Board() {
     </View>
   );
 
+  const switcherNode = (
+    <View className="switcher">
+      <View className={`switcher__arrow ${hasPrev ? '' : 'switcher__arrow--off'}`} onClick={goPrev}>
+        ‹
+      </View>
+      <Text className="switcher__label">
+        第 {roundIdx + 1} 轮 <Text className="switcher__total">/ 共 {total} 轮</Text>
+      </Text>
+      <View className={`switcher__arrow switcher__arrow--next ${hasNext ? '' : 'switcher__arrow--off'}`} onClick={goNext}>
+        ›
+      </View>
+    </View>
+  );
+
   return (
-    <View className="board">
-      <ScrollView scrollY className="board__scroll">
+    <PageFrame title="对阵看板" activeTab="home" subHeader={switcherNode}>
+      <View className="board">
         <View className="board__inner">
         {/* 本场结算入口（有已结束对局时） */}
         {finishedCount > 0 ? (
@@ -130,19 +146,6 @@ export default function Board() {
             <Text className="board__summary-arrow">›</Text>
           </View>
         ) : null}
-
-        {/* 轮次切换器 */}
-        <View className="switcher">
-          <View className={`switcher__arrow ${hasPrev ? '' : 'switcher__arrow--off'}`} onClick={goPrev}>
-            ‹
-          </View>
-          <Text className="switcher__label">
-            第 {roundIdx + 1} 轮 <Text className="switcher__total">/ 共 {total} 轮</Text>
-          </Text>
-          <View className={`switcher__arrow switcher__arrow--next ${hasNext ? '' : 'switcher__arrow--off'}`} onClick={goNext}>
-            ›
-          </View>
-        </View>
 
         {/* 当前轮各场地 */}
         {round && round.matches.length > 0 ? (
@@ -201,7 +204,7 @@ export default function Board() {
 
         <View className="board__pad" />
         </View>
-      </ScrollView>
-    </View>
+      </View>
+    </PageFrame>
   );
 }

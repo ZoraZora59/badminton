@@ -20,6 +20,13 @@
 6. 涉及架构、接口、数据模型时看 `docs/architecture.md`
 7. 涉及验收状态时看 `docs/validation.md`
 
+## Loop Engineering 约束
+
+- 涉及报名、候补、请假、+1 带人、签到、候补补位、临时球友、本场水平、分组输入的任务，必须先读 `docs/loop-engineering.md` 和 `docs/validation.md` 的 Loop Engineering 对账及 E3/E4。
+- 处理上述任务时，不能只按页面或接口拆分，必须按「报名签到闭环」判断影响范围：活动详情 -> 报名/候补/请假/+1 -> 三类头像墙 -> 自助签到/局长签到 -> 候补补位/Guest/本场水平 -> `participants` 分组输入。
+- 完成这类任务后，交付说明必须写清：改动影响了闭环中的哪些节点、是否需要更新 `docs/validation.md`、跑了哪些验证；如果没有跑微信开发者工具或真机验证，要明确说明剩余风险。
+- 不允许把“接口存在”直接等同于“体验闭环完成”；涉及用户可感知流程时，需要同时看页面入口、状态反馈、手动验收路径和截图证据。
+
 ## 项目事实
 
 - 项目名：`来打我呀`
@@ -118,4 +125,3 @@ pnpm dev:frontend
 - 仓库可能有未跟踪或他人改动，不要使用 `git reset --hard`、`git checkout --` 清理不属于本次任务的内容。
 - 不要提交 `node_modules/`、`frontend/dist/`、`backend/dist/`、`.tmp/`、`.DS_Store`、真实 config、日志、密钥。
 - 提交信息使用简短中文。
-

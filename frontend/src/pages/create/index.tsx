@@ -5,7 +5,7 @@ import { PlayType, GroupMode, type CreateActivityReq } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
 import { toastError } from '../../services/api';
-import { Empty } from '../../components';
+import { Empty, PageFrame } from '../../components';
 import { fmtCardTime, cleanRemark } from '../../utils/format';
 import './index.scss';
 
@@ -64,7 +64,6 @@ export default function Create() {
 
   useDidShow(() => {
     if (!isEdit) return;
-    Taro.setNavigationBarTitle({ title: '编辑活动' });
     if (loaded) return;
     void (async () => {
       try {
@@ -145,16 +144,35 @@ export default function Create() {
     }
   };
 
+  const pageTitle = isEdit ? '编辑活动' : '发起活动';
+
+  const footerNode = (
+    <View
+      className={`create__submit ${submitting ? 'create__submit--disabled' : ''}`}
+      onClick={submit}
+    >
+      {submitting
+        ? isEdit
+          ? '保存中…'
+          : '发布中…'
+        : isEdit
+          ? '保存修改'
+          : '发布 · 邀请球友'}
+    </View>
+  );
+
   if (isEdit && !loaded) {
     return (
-      <View className="create create--loading">
-        <Empty text="加载中…" />
-      </View>
+      <PageFrame title={pageTitle} activeTab="home">
+        <View className="create--loading">
+          <Empty text="加载中…" />
+        </View>
+      </PageFrame>
     );
   }
 
   return (
-    <View className="create">
+    <PageFrame title={pageTitle} activeTab="home" footer={footerNode}>
       <View className="create__form">
         {/* 活动标题 */}
         <View className="field">
@@ -333,22 +351,6 @@ export default function Create() {
 
         <View className="create__pad" />
       </View>
-
-      {/* 底部提交 */}
-      <View className="create__footer">
-        <View
-          className={`create__submit ${submitting ? 'create__submit--disabled' : ''}`}
-          onClick={submit}
-        >
-          {submitting
-            ? isEdit
-              ? '保存中…'
-              : '发布中…'
-            : isEdit
-              ? '保存修改'
-              : '发布 · 邀请球友'}
-        </View>
-      </View>
-    </View>
+    </PageFrame>
   );
 }

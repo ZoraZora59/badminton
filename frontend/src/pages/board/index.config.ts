@@ -1,3 +1,3 @@
 export default definePageConfig({
-  navigationBarTitleText: '对阵看板',
+  navigationStyle: 'custom',
 });

@@ -31,6 +31,9 @@ page {
   --grad-header: linear-gradient(150deg, #16a34a, #0b7a3b);
   --grad-mvp: linear-gradient(135deg, #0b5e34, #16a34a);
 
+  /* 底部常驻 tab 栏高度（不含安全区，含图标+文字两行）；由 PageFrame 作为 flex 子元素占位 */
+  --tabbar-h: 56px;
+
   /* 圆角 / 阴影 */
   --radius-card: 16px;
   --radius-btn: 14px;

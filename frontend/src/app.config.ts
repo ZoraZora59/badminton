@@ -19,6 +19,8 @@ export default defineAppConfig({
     backgroundTextStyle: 'dark',
   },
   tabBar: {
+    // 自定义 tabBar：选中态药丸底等高保真样式由 src/custom-tab-bar 渲染，原生 tabBar 做不到
+    custom: true,
     color: '#a4a9af',
     selectedColor: '#16A34A',
     backgroundColor: '#ffffff',

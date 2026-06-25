@@ -1,0 +1,57 @@
+/* 底部 tab 视觉（高保真稿）：药丸底选中态。供 custom-tab-bar（fixed）与 BottomTab（内联）共用 */
+.tbar {
+  flex-shrink: 0;
+  background: #ffffff;
+  border-top: 1px solid var(--c-border-2, #eef2f0);
+
+  /* 自定义 tabBar：固定视口底部 */
+  &--fixed {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    box-shadow: 0 -2px 12px rgba(20, 40, 28, 0.04);
+  }
+
+  &__row {
+    display: flex;
+    height: var(--tabbar-h, 56px);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  &__item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+  }
+
+  /* 图标外的药丸：选中态填浅绿底 */
+  &__pill {
+    width: 48px;
+    height: 26px;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.18s ease;
+
+    &--on {
+      background: var(--c-success-bg, #e6f4ec);
+    }
+  }
+
+  &__txt {
+    font-size: 10px;
+    line-height: 1.2;
+    color: var(--c-text-4, #9aa0a6);
+
+    &--on {
+      color: var(--c-primary, #16a34a);
+      font-weight: 600;
+    }
+  }
+}

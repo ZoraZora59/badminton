@@ -1,14 +1,17 @@
 .sc {
-  min-height: 100vh;
-  background: var(--c-bg);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  &__inner {
+    padding: 16px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
 
-  &--center {
+  &__state {
+    display: flex;
     align-items: center;
     justify-content: center;
+    padding: 80px 0;
   }
   &__loading {
     font-size: 13px;
@@ -150,10 +153,8 @@
 
   /* ===== 底部操作 ===== */
   &__actions {
-    margin-top: auto;
     display: flex;
     gap: 10px;
-    padding-bottom: calc(8px + env(safe-area-inset-bottom));
   }
   &__btn {
     height: 48px;

@@ -6,6 +6,7 @@ import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
 import { toastError } from '../../services/api';
 import { Avatar, Empty, PrimaryButton } from '../../components';
+import { goBack } from '../../utils/nav';
 import './index.scss';
 
 export default function Profile() {
@@ -54,7 +55,7 @@ export default function Profile() {
         <View className="profile__blob" />
         <View className="profile__statusbar">
           {isOther ? (
-            <View className="profile__back" onClick={() => Taro.navigateBack()}>
+            <View className="profile__back" onClick={goBack}>
               <Text className="profile__back-arrow">‹</Text>
             </View>
           ) : null}

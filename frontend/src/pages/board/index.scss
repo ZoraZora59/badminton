@@ -1,10 +1,4 @@
 .board {
-  min-height: 100vh;
-  background: var(--c-bg);
-
-  &__scroll {
-    height: 100vh;
-  }
   &__inner {
     padding: 16px;
     box-sizing: border-box;

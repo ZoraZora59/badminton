@@ -42,3 +42,6 @@ frontend/.swc/
 # wechat miniprogram upload private key (secret)
 *.key
 frontend/ci/private.*.key
+
+# wechat devtools private/local project config (per-machine, not for repo)
+frontend/project.private.config.json

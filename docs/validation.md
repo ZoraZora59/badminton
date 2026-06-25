@@ -3,6 +3,15 @@
 > 原则：**覆盖要被证明，不是被假设。** 下表把每条 v1 用户故事映射到接口与自动化测试。
 > 自动化：`pnpm --filter @badminton/backend test`（引擎单测 `test/engine.test.ts` + E1–E8 接口走查 `test/api.test.ts`，连真实 `badminton_dev`）。
 > 图例：✅ 接口+自动化测试覆盖 · 🟡 接口已实现+前端页面有，自动化未专项断言 · ⚪ v1 可选/后置未做。
+> UI 框架：全站已统一为「顶部小 header + 主体 + 底部常驻 tab」，详见 [`ui-framework-unification-2026-06-25.md`](./ui-framework-unification-2026-06-25.md)（含待真机验证项）。
+
+## Loop Engineering 对账
+
+| 闭环 | 覆盖用户故事 | 核心完成态 | 工程证据 | 体验证据 | 状态 |
+|---|---|---|---|---|---|
+| 报名签到闭环 | E3 / E4 | 球友完成报名、候补、请假、自助签到；局长完成三类名单确认、批量签到、候补补位、Guest、本场水平确认，并产出分组输入 `participants` | `backend/test/api.test.ts` 覆盖报名、满员候补、自动补位、请假、批量签到、自助签到、Guest、参赛者池；核心代码见 `signups` / `checkin` 模块 | `activity` 页三类头像墙与球友操作区；`checkin` 页签到清单、候补补位、Guest 和 LevelSheet；完整手动清单见本文「微信小程序手动验证清单」第 3、4 项 | ✅ |
+
+详细编制见 [`loop-engineering.md`](./loop-engineering.md)。该闭环的接口覆盖和页面入口均已落地；每次发布前仍需用微信开发者工具或真机复验三类头像墙、自助签到、签到页和分组输入是否一致。
 
 ## E1 登录与个人资料
 | 故事 | 接口 | 测试/页面 | 状态 |
@@ -35,7 +44,7 @@
 | US-4.2 自助签到 | `POST /activities/:id/checkin/me` | 非局长在 `activity` 页「我已到场·签到」自助签到（可撤销）；局长 `checkin` 页可见结果并调整；api.test「E4.2」覆盖撤/签开关 + 请假者被拒 | ✅ |
 | US-4.3 临时球友 Guest | `POST /activities/:id/participants` | api.test 加 Guest（isGuest=true，无 openid） | ✅ |
 | US-4.4 确认/调整本场水平 | checkin `perGameLevel` | api.test 设本场水平；`checkin` 页点 LevelSheet | ✅ |
-| US-4.5 候补补位 | `POST …/signups/:signupId/promote` | 接口已实现；`checkin` 页补位按钮（自动补位已在 api.test 证） | ✅ |
+| US-4.5 候补补位 | `POST …/signups/:signupId/promote` | 自动补位已在 api.test 证明；`checkin` 页补位按钮用于局长现场手动补位，操作前需确认场地和人数 | ✅ |
 
 ## E5 双打分队分组 ★
 | 故事 | 接口 | 测试/页面 | 状态 |
