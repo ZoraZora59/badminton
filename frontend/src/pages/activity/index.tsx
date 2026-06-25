@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { View, Text, Button } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import Taro, { useRouter, useDidShow, useShareAppMessage } from '@tarojs/taro';
 import {
   ActivityStatus,
@@ -147,15 +147,10 @@ export default function Activity() {
             <Text className="sc-act__count-n num">{act.signedUpCount}</Text>
             <Text className="sc-act__count-cap num">/ {act.capacity} 人已报名</Text>
           </View>
-          {/* 预览里的主 CTA 也走转发：点它等同底部「转发给球友」，避免按钮无反应 */}
-          <Button
-            className="sc-act__cta"
-            openType="share"
-            hoverClass="none"
-            onClick={() => setShareOpen(false)}
-          >
+          {/* 预览里的主 CTA 仅为「球友看到的样子」示意，不可点；真正转发走下方「转发给球友」按钮 */}
+          <View className="sc-act__cta">
             <Text className="sc-act__cta-txt">点我报名 · 加入球局</Text>
-          </Button>
+          </View>
         </View>
       </View>
     </ShareCard>
