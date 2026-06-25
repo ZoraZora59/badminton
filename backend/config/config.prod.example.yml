@@ -1,0 +1,18 @@
+# 线上环境配置模板 —— 部署到阿里云时复制为 config.prod.yml 并填真实值（不入库）
+# 线上从阿里云内网访问数据库；鉴权走真实微信。
+server:
+  host: 127.0.0.1   # 仅监听本机，由 nginx 反代
+  port: 3010
+database:
+  # 线上库 badminton（user badminton），走阿里云内网；与本地 dev 库 badminton_dev 分离
+  url: "mysql://badminton:PASSWORD@127.0.0.1:3204/badminton"
+jwt:
+  secret: "REPLACE_WITH_STRONG_SECRET"
+  expiresIn: "30d"
+auth:
+  mode: wechat
+  appId: "YOUR_WECHAT_APPID"
+  appSecret: "YOUR_WECHAT_APPSECRET"
+timezone: Asia/Shanghai
+cors:
+  enabled: false

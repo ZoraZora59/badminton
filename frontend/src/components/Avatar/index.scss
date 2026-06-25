@@ -1,0 +1,22 @@
+.bm-avatar {
+  border-radius: 50%;
+  background: #cfe3d6;
+  color: var(--c-primary-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  &--ring {
+    border: 2px solid #fff;
+  }
+  &__img {
+    width: 100%;
+    height: 100%;
+  }
+  &__txt {
+    line-height: 1;
+  }
+}

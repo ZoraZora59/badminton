@@ -1,0 +1,30 @@
+.bm-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+
+  &--success {
+    background: var(--c-success-bg);
+    color: var(--c-primary);
+  }
+  &--primary {
+    background: var(--c-primary-dark);
+    color: #fff;
+  }
+  &--warn {
+    background: var(--c-warn-bg);
+    color: var(--c-warn);
+  }
+  &--muted {
+    background: var(--c-border-2);
+    color: var(--c-text-3);
+  }
+  &--accent {
+    background: var(--c-accent-soft);
+    color: #eaffb0;
+  }
+}

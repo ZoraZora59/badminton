@@ -1,0 +1,213 @@
+// 来打我呀 —— 数据模型
+// 红线：纯活动模型（无球队/俱乐部）、不碰钱。用户按 openid 持久。
+// 时间：DB 存 UTC，展示层转 Asia/Shanghai。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL") // 由 scripts/prisma.mjs 从 config.<env>.yml 注入；运行时 PrismaClient 直接传 url
+}
+
+// ============ 枚举（与 @badminton/shared 字符串值一一对应）============
+enum Gender {
+  MALE
+  FEMALE
+  UNKNOWN
+}
+
+enum SkillLevel {
+  L1
+  L2
+  L3
+  L4
+  L5
+  L6
+}
+
+enum ActivityStatus {
+  SIGNUP
+  ONGOING
+  FINISHED
+  CANCELLED
+}
+
+enum PlayType {
+  DOUBLES
+  SINGLES
+}
+
+enum GroupMode {
+  BALANCED
+  ROTATION
+}
+
+enum RotationKind {
+  AMERICANO
+  MEXICANO
+}
+
+enum SignupStatus {
+  SIGNED_UP
+  WAITLIST
+  LEAVE
+}
+
+enum MatchStatus {
+  PENDING
+  ONGOING
+  FINISHED
+}
+
+enum Team {
+  A
+  B
+}
+
+// ============ 双实体 1:1：微信身份 ↔ 我们的用户 ============
+model WechatAccount {
+  id         Int      @id @default(autoincrement())
+  openid     String   @unique
+  unionid    String?
+  sessionKey String?
+  wxNickname String? // 微信原始昵称（仅留痕，不作业务主数据）
+  wxAvatar   String? // 微信原始头像
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User?
+}
+
+model User {
+  id              Int           @id @default(autoincrement())
+  nickname        String        @default("球友")
+  avatarUrl       String        @db.MediumText // 存微信头像 base64 data URL（参考 camping，避免上传/域名）；创建时显式置 ""
+  gender          Gender        @default(UNKNOWN)
+  defaultLevel    SkillLevel    @default(L3)
+  wechatAccountId Int           @unique
+  wechatAccount   WechatAccount @relation(fields: [wechatAccountId], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  hostedActivities Activity[]    @relation("HostedActivities")
+  signups          Signup[]
+  participants     Participant[]
+}
+
+// ============ 活动 ============
+model Activity {
+  id             Int            @id @default(autoincrement())
+  hostId         Int
+  host           User           @relation("HostedActivities", fields: [hostId], references: [id])
+  title          String
+  startAt        DateTime
+  endAt          DateTime?
+  venue          String
+  courtCount     Int            @default(1)
+  capacity       Int            @default(8)
+  signupDeadline DateTime?
+  playType       PlayType       @default(DOUBLES)
+  defaultMode    GroupMode      @default(BALANCED)
+  mixedDoubles   Boolean        @default(false)
+  remark         String?        @db.Text
+  status         ActivityStatus @default(SIGNUP)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  signups      Signup[]
+  participants Participant[]
+  rounds       Round[]
+
+  @@index([hostId])
+  @@index([status])
+}
+
+// ============ 报名 / 候补 / 请假（仅真人；头像墙数据源）============
+model Signup {
+  id           Int          @id @default(autoincrement())
+  activityId   Int
+  activity     Activity     @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  userId       Int
+  user         User         @relation(fields: [userId], references: [id])
+  status       SignupStatus @default(SIGNED_UP)
+  plusOne      Int          @default(0)
+  perGameLevel SkillLevel?
+  checkedIn    Boolean      @default(false)
+  order        Int          @default(0) // 报名/候补排序，用于自动补位
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([activityId, userId])
+  @@index([activityId])
+}
+
+// ============ 参赛者（真人 / 临时 Guest，分组与计分的统一身份）============
+model Participant {
+  id         Int        @id @default(autoincrement())
+  activityId Int
+  activity   Activity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  userId     Int? // null = 临时 Guest（无 openid）
+  user       User?      @relation(fields: [userId], references: [id])
+  guestName  String?
+  displayName String
+  level      SkillLevel @default(L3)
+  gender     Gender     @default(UNKNOWN)
+  isGuest    Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+
+  matchPlayers MatchPlayer[]
+
+  @@unique([activityId, userId]) // 真人参赛者按(活动,用户)唯一；Guest 的 userId=NULL，MySQL 允许多个 NULL
+  @@index([activityId])
+  @@index([userId])
+}
+
+// ============ 轮次 / 对局 ============
+model Round {
+  id         Int           @id @default(autoincrement())
+  activityId Int
+  activity   Activity      @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  index      Int // 第几轮（从 1 起）
+  mode       GroupMode
+  playType   PlayType
+  rotation   RotationKind?
+  status     MatchStatus   @default(PENDING)
+  byeJson    Json? // 本轮轮空 participantId[]
+  createdAt  DateTime      @default(now())
+
+  matches Match[]
+
+  @@unique([activityId, index])
+  @@index([activityId])
+}
+
+model Match {
+  id        Int         @id @default(autoincrement())
+  roundId   Int
+  round     Round       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  courtNo   Int
+  scoreA    Int?
+  scoreB    Int?
+  winner    Team?
+  status    MatchStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  players MatchPlayer[]
+
+  @@index([roundId])
+}
+
+model MatchPlayer {
+  id            Int         @id @default(autoincrement())
+  matchId       Int
+  match         Match       @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  participantId Int
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  team          Team
+
+  @@unique([matchId, participantId])
+  @@index([matchId])
+  @@index([participantId])
+}

@@ -1,0 +1,199 @@
+.board {
+  min-height: 100vh;
+  background: var(--c-bg);
+
+  &__scroll {
+    height: 100vh;
+  }
+  &__inner {
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  &__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 120px;
+  }
+  &__loading-txt {
+    font-size: 13px;
+    color: var(--c-text-3);
+  }
+  &__pad {
+    height: 24px;
+  }
+
+  // 本场结算入口
+  &__summary {
+    background: #fff;
+    border-radius: var(--radius-card);
+    padding: 13px 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-card);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  &__summary-txt {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c-primary-dark);
+  }
+  &__summary-arrow {
+    font-size: 18px;
+    color: var(--c-text-4);
+  }
+}
+
+// 轮次切换器
+.switcher {
+  background: #fff;
+  border-radius: 13px;
+  padding: 5px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 6px rgba(20, 40, 28, 0.04);
+
+  &__arrow {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--c-primary);
+
+    &--next {
+      background: #eef6f0;
+    }
+    &--off {
+      color: #c0c8c3;
+      background: transparent;
+    }
+  }
+  &__label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--c-text);
+  }
+  &__total {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--c-text-4);
+  }
+}
+
+// 场地对局卡
+.court {
+  background: #fff;
+  border-radius: var(--radius-card);
+  padding: 15px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1.5px solid transparent;
+
+  &--active {
+    border-color: #cfe3d6;
+    box-shadow: 0 2px 12px rgba(22, 163, 74, 0.08);
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  &__title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--c-text);
+  }
+
+  &__vs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  &__vs-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #c0c8c3;
+  }
+  &__team {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    &--right {
+      align-items: flex-end;
+    }
+  }
+  &__player {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  &__player-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--c-text);
+  }
+}
+
+// 已结束比分
+.result {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+
+  &__stack {
+    display: flex;
+    align-items: center;
+  }
+  &__stack-item {
+    position: relative;
+  }
+  &__score {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  &__colon {
+    color: #c0c8c3;
+  }
+  &__num--win {
+    color: var(--c-primary);
+  }
+  &__num--lose {
+    color: var(--c-text-4);
+  }
+}
+
+// 轮空提示
+.bye {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 2px 0;
+
+  &__tag {
+    background: var(--c-warn-bg);
+    color: var(--c-warn);
+    padding: 3px 8px;
+    border-radius: 7px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  &__txt {
+    font-size: 10px;
+    color: var(--c-text-4);
+  }
+}

@@ -1,0 +1,144 @@
+.bm-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+
+  &__mask {
+    position: absolute;
+    inset: 0;
+    background: rgba(20, 28, 24, 0.45);
+  }
+  &__panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #fff;
+    border-radius: 24px 24px 0 0;
+    padding: 10px 18px calc(18px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+  }
+  &__handle {
+    width: 38px;
+    height: 4px;
+    border-radius: 2px;
+    background: #e3e8e5;
+    align-self: center;
+  }
+  &__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+  &__title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--c-text);
+  }
+  &__sub {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--c-text-4);
+  }
+  &__close {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--c-border-2);
+    color: var(--c-text-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+  }
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  &__confirm {
+    height: 48px;
+    border-radius: var(--radius-btn);
+    background: var(--c-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 600;
+    box-shadow: var(--shadow-btn);
+    margin-top: 2px;
+  }
+}
+
+.bm-lv {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  border: 1.5px solid var(--c-border-2);
+
+  &--on {
+    border-color: var(--c-primary);
+    background: #f3faf5;
+    box-shadow: 0 2px 10px rgba(22, 163, 74, 0.1);
+  }
+  &__badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--c-border-2);
+    color: var(--c-text-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  &--on &__badge {
+    background: #cfe8d8;
+    color: var(--c-primary-deep);
+  }
+  &__body {
+    flex: 1;
+  }
+  &__name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c-text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  &__default {
+    font-size: 9px;
+    color: var(--c-primary);
+    background: var(--c-success-bg);
+    padding: 1px 6px;
+    border-radius: 5px;
+  }
+  &__desc {
+    font-size: 10px;
+    color: var(--c-text-4);
+  }
+  &__radio {
+    width: 19px;
+    height: 19px;
+    border-radius: 50%;
+    border: 1.5px solid #d3dad6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #fff;
+
+    &--on {
+      background: var(--c-primary);
+      border-color: var(--c-primary);
+    }
+  }
+}

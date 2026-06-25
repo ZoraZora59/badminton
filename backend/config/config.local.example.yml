@@ -1,0 +1,19 @@
+# 本地环境配置模板 —— 复制为 config.local.yml 并填入真实值（真实文件不入库）
+# 后端只从本文件取值，不读环境变量。
+server:
+  host: 0.0.0.0
+  port: 3000
+database:
+  # 本地验证：直连远程 dev 库
+  url: "mysql://USER:PASSWORD@HOST:PORT/DB_NAME"
+jwt:
+  secret: "change-me-dev-secret"
+  expiresIn: "30d"
+auth:
+  # mock = 跳过 code2session，用于本地/接口自动化测试；wechat = 真实小程序登录
+  mode: mock
+  appId: ""
+  appSecret: ""
+timezone: Asia/Shanghai
+cors:
+  enabled: true

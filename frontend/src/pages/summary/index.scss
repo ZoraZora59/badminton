@@ -1,0 +1,191 @@
+.summary {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--c-bg);
+
+  &__scroll {
+    flex: 1;
+    min-height: 0;
+  }
+  &__inner {
+    padding: 16px 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* 今日榜标题行 */
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 2px;
+  }
+  &__head-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--c-text);
+  }
+  &__head-mode {
+    font-size: 10px;
+    color: var(--c-text-4);
+  }
+
+  /* 底部固定操作区 */
+  &__foot {
+    flex-shrink: 0;
+    background: var(--c-card);
+    border-top: 1px solid var(--c-border-2);
+    padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
+  }
+  &__foot-gap {
+    height: 10px;
+  }
+  &__share {
+    margin: 0;
+    gap: 7px;
+  }
+  &__share-txt {
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+  }
+}
+
+/* ===== MVP 卡 ===== */
+.mvp {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  padding: 15px;
+  background: var(--grad-mvp);
+  display: flex;
+  align-items: center;
+  gap: 13px;
+
+  &__deco {
+    position: absolute;
+    right: -20px;
+    top: -20px;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: rgba(215, 242, 107, 0.18);
+  }
+  &__avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--c-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  &__info {
+    flex: 1;
+    position: relative;
+    z-index: 1;
+  }
+  &__tag {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  &__tag-txt {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--c-accent);
+  }
+  &__name {
+    display: block;
+    font-size: 17px;
+    font-weight: 700;
+    color: #fff;
+    margin-top: 2px;
+  }
+  &__score {
+    position: relative;
+    z-index: 1;
+    text-align: right;
+  }
+  &__wins {
+    display: block;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--c-accent);
+    line-height: 1;
+  }
+  &__pts {
+    display: block;
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-top: 3px;
+  }
+}
+
+/* ===== 今日榜列表 ===== */
+.rank {
+  background: var(--c-card);
+  border-radius: var(--radius-card);
+  padding: 6px;
+  box-shadow: var(--shadow-card);
+
+  &__sep {
+    height: 1px;
+    background: var(--c-border-2);
+    margin: 0 11px;
+  }
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 11px;
+
+    &--dim {
+      opacity: 0.65;
+    }
+  }
+  &__badge {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    background: var(--c-border-2);
+    color: var(--c-text-3);
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &--first {
+      background: var(--c-primary);
+      color: #fff;
+    }
+  }
+  &__avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  &__name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c-text);
+  }
+  &__val {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--c-text-2);
+
+    &--first {
+      color: var(--c-primary);
+    }
+  }
+}

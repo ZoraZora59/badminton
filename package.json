@@ -1,0 +1,37 @@
+{
+  "name": "badminton-game",
+  "version": "0.1.0",
+  "private": true,
+  "description": "来打我呀 — 羽毛球组局微信小程序（约球 / 分队 / 记分）。TS 全栈单仓多工程。",
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "lru-cache": "^7.18.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "webpack": "5.78.0"
+    },
+    "onlyBuiltDependencies": [
+      "@tarojs/binding",
+      "@swc/core",
+      "esbuild",
+      "core-js",
+      "core-js-pure",
+      "swiper",
+      "prisma",
+      "@prisma/client",
+      "@prisma/engines"
+    ]
+  },
+  "scripts": {
+    "build:shared": "pnpm --filter @badminton/shared build",
+    "dev:backend": "pnpm --filter @badminton/backend dev",
+    "dev:frontend": "pnpm --filter @badminton/frontend dev:weapp",
+    "test:backend": "pnpm --filter @badminton/backend test",
+    "db:migrate": "pnpm --filter @badminton/backend db:migrate",
+    "db:seed": "pnpm --filter @badminton/backend db:seed"
+  }
+}

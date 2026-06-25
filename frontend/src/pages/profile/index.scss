@@ -1,0 +1,247 @@
+.profile {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-bg);
+
+  /* ===== 绿色 Hero ===== */
+  &__header {
+    position: relative;
+    background: linear-gradient(150deg, var(--c-primary), var(--c-primary-deep));
+    padding-bottom: 20px;
+    overflow: hidden;
+  }
+  &__blob {
+    position: absolute;
+    right: -26px;
+    top: -20px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(215, 242, 107, 0.14);
+  }
+  &__statusbar {
+    height: env(safe-area-inset-top);
+    min-height: 20px;
+    padding: 0 16px;
+    display: flex;
+    align-items: flex-end;
+  }
+  &__back {
+    position: relative;
+    z-index: 2;
+    width: 34px;
+    height: 34px;
+    margin-left: -6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  &__back-arrow {
+    font-size: 26px;
+    line-height: 1;
+    color: #fff;
+  }
+  &__hero {
+    position: relative;
+    z-index: 1;
+    padding: 10px 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  &__id {
+    flex: 1;
+    min-width: 0;
+  }
+  &__name {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+  }
+  &__level {
+    margin-top: 4px;
+    padding: 3px 10px;
+    border-radius: 8px;
+    background: rgba(215, 242, 107, 0.22);
+    width: fit-content;
+  }
+  &__level-txt {
+    font-size: 10px;
+    font-weight: 600;
+    color: #eaffb0;
+  }
+
+  /* ===== 内容区 ===== */
+  &__body {
+    flex: 1;
+    min-height: 0;
+    margin-top: -10px;
+    background: var(--c-bg);
+    border-radius: 18px 18px 0 0;
+  }
+  &__inner {
+    padding: 16px;
+  }
+  &__row {
+    display: flex;
+    gap: 9px;
+    margin-bottom: 13px;
+  }
+  &__newbie {
+    padding-top: 20px;
+  }
+  &__newbie-cta {
+    margin-top: 8px;
+    padding: 0 8px;
+  }
+  &__newbie-gap {
+    height: 10px;
+  }
+  &__pad {
+    height: 24px;
+  }
+
+  /* 统计三宫格 */
+  &__stat {
+    flex: 1;
+    background: var(--c-card);
+    border-radius: 14px;
+    padding: 13px 8px;
+    text-align: center;
+    box-shadow: 0 1px 6px rgba(20, 40, 28, 0.04);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  &__stat-num {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--c-text);
+    line-height: 1.1;
+
+    &--green {
+      color: var(--c-primary);
+    }
+  }
+  &__stat-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--c-text-4);
+    margin-top: 3px;
+  }
+
+  /* 最佳搭档 / 苦主 */
+  &__mini {
+    flex: 1;
+    background: var(--c-card);
+    border-radius: 14px;
+    padding: 12px;
+    box-shadow: 0 1px 6px rgba(20, 40, 28, 0.04);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+  }
+  &__mini-av {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    overflow: hidden;
+
+    &--partner {
+      background: #cfe3d6;
+    }
+    &--nemesis {
+      background: #dde7e1;
+    }
+  }
+  &__mini-info {
+    min-width: 0;
+  }
+  &__mini-label {
+    display: block;
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--c-text-4);
+  }
+  &__mini-name {
+    display: block;
+    margin-top: 1px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* 积分趋势 */
+  &__trend {
+    background: var(--c-card);
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 1px 6px rgba(20, 40, 28, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  &__trend-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  &__trend-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--c-text);
+  }
+  &__trend-sub {
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--c-primary);
+  }
+  &__bars {
+    height: 110px;
+    display: flex;
+    align-items: flex-end;
+    gap: 7px;
+  }
+  &__bar {
+    flex: 1;
+    background: #e3ebe6;
+    border-radius: 5px 5px 0 0;
+
+    &--on {
+      background: var(--c-primary);
+    }
+  }
+
+  /* ===== 分享底栏 ===== */
+  &__footer {
+    flex-shrink: 0;
+    padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
+    background: var(--c-card);
+    border-top: 1px solid var(--c-border-2);
+  }
+  &__share {
+    margin: 0;
+    height: 46px;
+    border-radius: var(--radius-btn);
+    border: 1.5px solid var(--c-primary);
+    background: var(--c-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--c-primary);
+    line-height: 46px;
+
+    &::after {
+      border: none;
+    }
+  }
+}

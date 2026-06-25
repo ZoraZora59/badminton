@@ -1,0 +1,48 @@
+/* 设计令牌 · 活力球场绿（Palette A）—— 与设计稿一一对应 */
+page {
+  /* 主色 */
+  --c-primary: #16a34a;
+  --c-primary-dark: #0b5e34;
+  --c-primary-deep: #0b7a3b;
+  --c-accent: #d7f26b;
+  --c-accent-soft: rgba(215, 242, 107, 0.22);
+
+  /* 背景 / 卡片 */
+  --c-bg: #f5f8f4;
+  --c-card: #ffffff;
+
+  /* 文本 */
+  --c-text: #15201a;
+  --c-text-2: #5b6b61;
+  --c-text-3: #80878f;
+  --c-text-4: #9aa0a6;
+  --c-text-disabled: #b6bcb8;
+
+  /* 线 / 浅底 */
+  --c-border: #e8ece9;
+  --c-border-2: #eef2f0;
+  --c-success-bg: #e6f4ec;
+
+  /* 状态色 */
+  --c-warn: #cc8a4a;
+  --c-warn-bg: #fdf0e3;
+
+  /* 渐变头部 */
+  --grad-header: linear-gradient(150deg, #16a34a, #0b7a3b);
+  --grad-mvp: linear-gradient(135deg, #0b5e34, #16a34a);
+
+  /* 圆角 / 阴影 */
+  --radius-card: 16px;
+  --radius-btn: 14px;
+  --shadow-card: 0 2px 10px rgba(20, 40, 28, 0.05);
+  --shadow-btn: 0 6px 16px rgba(22, 163, 74, 0.3);
+
+  background: var(--c-bg);
+}
+
+/* 字体：中文系统字；数字/比分用 Barlow（小程序无法加载外链字体，降级到系统等宽数字） */
+.num,
+.score {
+  font-family: 'Barlow Semi Condensed', 'DIN Alternate', system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}

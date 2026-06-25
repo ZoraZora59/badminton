@@ -1,0 +1,21 @@
+{
+  "miniprogramRoot": "dist/",
+  "projectname": "badminton",
+  "description": "来打我呀 · 羽毛球组局",
+  "appid": "wx11ee60a7b6ec3bd9",
+  "setting": {
+    "urlCheck": false,
+    "es6": false,
+    "enhance": false,
+    "postcss": false,
+    "minified": false,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    }
+  },
+  "compileType": "miniprogram",
+  "libVersion": "latest",
+  "condition": {}
+}

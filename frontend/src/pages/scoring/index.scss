@@ -1,0 +1,186 @@
+.sc {
+  min-height: 100vh;
+  background: var(--c-bg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  &--center {
+    align-items: center;
+    justify-content: center;
+  }
+  &__loading {
+    font-size: 13px;
+    color: var(--c-text-3);
+  }
+
+  /* ===== 大字比分卡 ===== */
+  &__score-card {
+    background: var(--c-card);
+    border-radius: 18px;
+    padding: 18px 14px;
+    box-shadow: var(--shadow-card);
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+  }
+  &__team {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  &__avatars {
+    display: flex;
+    align-items: center;
+  }
+  &__avatar-item {
+    position: relative;
+  }
+  &__team-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--c-text-3);
+    text-align: center;
+  }
+  &__score {
+    font-size: 58px;
+    font-weight: 700;
+    line-height: 0.85;
+    color: var(--c-text-4);
+
+    &--win {
+      color: var(--c-primary);
+    }
+  }
+  &__colon {
+    display: flex;
+    align-items: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: #d3dad6;
+  }
+
+  /* ===== 大按钮 +1 / -1（≥44px 触达）===== */
+  &__pads {
+    display: flex;
+    gap: 11px;
+  }
+  &__pad {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  &__plus {
+    height: 58px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    font-weight: 700;
+
+    &--a {
+      background: var(--c-primary);
+      color: #fff;
+      box-shadow: 0 5px 14px rgba(22, 163, 74, 0.28);
+    }
+    &--b {
+      background: #eef2f0;
+      border: 1.5px solid #d3dad6;
+      color: var(--c-text-2);
+    }
+  }
+  &__minus {
+    height: 44px;
+    border-radius: 13px;
+    background: #f0f3f1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--c-text-4);
+  }
+
+  /* ===== 直接填比分 ===== */
+  &__manual-toggle {
+    height: 44px;
+    border: 1.5px dashed #cdd5d0;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--c-text-3);
+  }
+  &__manual {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+  }
+  &__manual-input {
+    width: 88px;
+    height: 44px;
+    background: var(--c-card);
+    border: 1.5px solid var(--c-border);
+    border-radius: 12px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--c-text);
+  }
+  &__manual-colon {
+    font-size: 18px;
+    font-weight: 700;
+    color: #d3dad6;
+  }
+
+  &__hint {
+    font-size: 11px;
+    color: var(--c-warn);
+    text-align: center;
+  }
+
+  /* ===== 底部操作 ===== */
+  &__actions {
+    margin-top: auto;
+    display: flex;
+    gap: 10px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+  &__btn {
+    height: 48px;
+    border-radius: var(--radius-btn);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-size: 14px;
+    font-weight: 600;
+
+    &--ghost {
+      flex: 1;
+      border: 1.5px solid #d3dad6;
+      color: var(--c-text-3);
+      font-size: 13px;
+    }
+    &--primary {
+      flex: 1.5;
+      background: var(--c-primary);
+      color: #fff;
+      box-shadow: 0 6px 16px rgba(22, 163, 74, 0.3);
+    }
+  }
+  &__check {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+  }
+}

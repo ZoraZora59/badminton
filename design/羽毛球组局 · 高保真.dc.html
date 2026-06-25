@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+  * { box-sizing: border-box; }
+</style>
+</helmet>
+
+<!-- TITLE -->
+<div style="position:absolute;left:80px;top:36px;width:1000px">
+  <div style="font:700 30px/1.2 'PingFang SC',sans-serif;color:#15201a;letter-spacing:-.5px">来打我呀 · 高保真 <span style="font:500 14px system-ui;color:#9aa0a6">v0.1 · 活力球场绿</span></div>
+  <div style="margin-top:8px;font:400 13px/1.6 system-ui;color:#8b9097">微信小程序 · 9 个核心页 — 主色 #16A34A · 荧光点缀 #D7F26B · 比分用 Barlow</div>
+</div>
+
+<!-- SECTION -->
+<div data-drags-parent="0" style="position:absolute;left:80px;top:96px;font:700 16px system-ui;color:#15201a">主链路 <span style="font:400 12px system-ui;color:#9aa0a6">建局 → 报名 → 签到 → 分组 → 看板 → 计分 → 结算 → 战绩</span></div>
+
+<!-- ===== 1 · 首页/我的局 ===== -->
+<div style="position:absolute;left:80px;top:150px;width:320px">
+  <div data-drags-parent="1" style="position:absolute;top:-22px;font:600 11px system-ui;color:#8b9097">① 首页 / 我的局</div>
+  <div style="position:relative;width:320px;height:690px;background:#f5f8f4;border-radius:34px;box-shadow:0 10px 36px rgba(20,40,28,.14);overflow:hidden;display:flex;flex-direction:column">
+    <!-- green header -->
+    <div style="background:linear-gradient(150deg,#16a34a,#0b7a3b);padding:0 0 20px">
+      <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font:600 12px Barlow,system-ui;color:rgba(255,255,255,.92)"><span>9:41</span><span style="display:flex;gap:4px;align-items:center"><span style="width:16px;height:9px;border:1.2px solid rgba(255,255,255,.8);border-radius:2px"></span></span></div>
+      <div style="padding:6px 20px 0;display:flex;align-items:flex-start;justify-content:space-between">
+        <div><div style="font:400 12px system-ui;color:rgba(255,255,255,.78)">下午好，准备开打 🏸</div><div style="font:700 22px 'PingFang SC',sans-serif;color:#fff;margin-top:3px">我的球局</div></div>
+        <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.35)"></div>
+      </div>
+      <!-- quick stat strip -->
+      <div style="margin:16px 20px 0;background:rgba(255,255,255,.14);border-radius:14px;padding:12px 14px;display:flex;align-items:center;justify-content:space-around">
+        <div style="text-align:center"><div style="font:700 20px Barlow Semi Condensed,sans-serif;color:#d7f26b">3</div><div style="font:400 9px system-ui;color:rgba(255,255,255,.75)">报名中</div></div>
+        <div style="width:1px;height:24px;background:rgba(255,255,255,.2)"></div>
+        <div style="text-align:center"><div style="font:700 20px Barlow Semi Condensed,sans-serif;color:#fff">42</div><div style="font:400 9px system-ui;color:rgba(255,255,255,.75)">累计参赛</div></div>
+        <div style="width:1px;height:24px;background:rgba(255,255,255,.2)"></div>
+        <div style="text-align:center"><div style="font:700 20px Barlow Semi Condensed,sans-serif;color:#fff">58%</div><div style="font:400 9px system-ui;color:rgba(255,255,255,.75)">胜率</div></div>
+      </div>
+    </div>
+    <!-- body -->
+    <div style="flex:1;margin-top:-8px;background:#f5f8f4;border-radius:18px 18px 0 0;padding:16px;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+      <div style="display:flex;gap:8px"><div style="padding:7px 16px;border-radius:15px;background:#0b5e34;font:600 12px system-ui;color:#fff">报名中</div><div style="padding:7px 16px;border-radius:15px;background:#fff;font:500 12px system-ui;color:#80878f">进行中</div><div style="padding:7px 16px;border-radius:15px;background:#fff;font:500 12px system-ui;color:#80878f">已结束</div></div>
+      <!-- card 1 -->
+      <div style="background:#fff;border-radius:16px;padding:15px;box-shadow:0 2px 10px rgba(20,40,28,.05);display:flex;flex-direction:column;gap:11px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="font:700 15px 'PingFang SC',sans-serif;color:#15201a">周六晚 · 高手羽你局</div><div style="padding:3px 9px;border-radius:8px;background:#e6f4ec;font:600 10px system-ui;color:#16a34a">报名中</div></div>
+        <div style="display:flex;align-items:center;gap:14px;font:400 11px system-ui;color:#80878f"><span style="display:flex;align-items:center;gap:4px"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#9aa0a6" stroke-width="1.2"/><path d="M6 3.2V6l2 1.3" stroke="#9aa0a6" stroke-width="1.2" stroke-linecap="round"/></svg>周六 19:00</span><span style="display:flex;align-items:center;gap:4px"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 11s4-3.4 4-6.4A4 4 0 0 0 2 4.6C2 7.6 6 11 6 11Z" stroke="#9aa0a6" stroke-width="1.2"/><circle cx="6" cy="4.6" r="1.3" fill="#9aa0a6"/></svg>奥森馆 · 3 片</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex"><div style="width:28px;height:28px;border-radius:50%;background:#cfe3d6;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font:600 10px system-ui;color:#0b5e34">林</div><div style="width:28px;height:28px;border-radius:50%;background:#dde7e1;border:2px solid #fff;margin-left:-9px;display:flex;align-items:center;justify-content:center;font:600 10px system-ui;color:#5b6b61">王</div><div style="width:28px;height:28px;border-radius:50%;background:#d6e0da;border:2px solid #fff;margin-left:-9px;display:flex;align-items:center;justify-content:center;font:600 10px system-ui;color:#5b6b61">陈</div><div style="width:28px;height:28px;border-radius:50%;background:#eef2f0;border:2px solid #fff;margin-left:-9px;display:flex;align-items:center;justify-content:center;font:600 9px system-ui;color:#9aa0a6">+5</div></div>
+          <div style="display:flex;align-items:center;gap:8px"><div style="width:90px;height:6px;border-radius:3px;background:#eef2f0;overflow:hidden"><div style="width:50%;height:100%;background:#16a34a;border-radius:3px"></div></div><span style="font:700 12px Barlow,system-ui;color:#16a34a">8/16</span></div>
+        </div>
+      </div>
+      <!-- card 2 -->
+      <div style="background:#fff;border-radius:16px;padding:15px;box-shadow:0 2px 10px rgba(20,40,28,.05);display:flex;flex-direction:column;gap:11px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="font:700 15px 'PingFang SC',sans-serif;color:#15201a">周日上午 · 新手友谊赛</div><div style="padding:3px 9px;border-radius:8px;background:#fdf0e3;font:600 10px system-ui;color:#cc8a4a">满员候补</div></div>
+        <div style="display:flex;align-items:center;gap:14px;font:400 11px system-ui;color:#80878f"><span style="display:flex;align-items:center;gap:4px"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#9aa0a6" stroke-width="1.2"/><path d="M6 3.2V6l2 1.3" stroke="#9aa0a6" stroke-width="1.2" stroke-linecap="round"/></svg>周日 09:00</span><span style="display:flex;align-items:center;gap:4px"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 11s4-3.4 4-6.4A4 4 0 0 0 2 4.6C2 7.6 6 11 6 11Z" stroke="#9aa0a6" stroke-width="1.2"/><circle cx="6" cy="4.6" r="1.3" fill="#9aa0a6"/></svg>体育大学 · 2 片</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex"><div style="width:28px;height:28px;border-radius:50%;background:#dde7e1;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font:600 10px system-ui;color:#5b6b61">赵</div><div style="width:28px;height:28px;border-radius:50%;background:#d6e0da;border:2px solid #fff;margin-left:-9px;display:flex;align-items:center;justify-content:center;font:600 10px system-ui;color:#5b6b61">周</div></div><span style="font:700 12px Barlow,system-ui;color:#cc8a4a">8/8 · 候补2</span></div>
+      </div>
+    </div>
+    <!-- tab bar -->
+    <div style="height:58px;background:#fff;border-top:1px solid #eef2f0;display:flex;align-items:center;flex-shrink:0;padding-bottom:4px">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 22 22" fill="none"><rect x="3" y="3" width="7" height="7" rx="2" fill="#16a34a"/><rect x="12" y="3" width="7" height="7" rx="2" fill="#16a34a" opacity=".5"/><rect x="3" y="12" width="7" height="7" rx="2" fill="#16a34a" opacity=".5"/><rect x="12" y="12" width="7" height="7" rx="2" fill="#16a34a"/></svg><span style="font:600 9px system-ui;color:#16a34a">球局</span></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 22 22" fill="none"><path d="M4 18V9M9 18V5M14 18v-6M19 18v-9" stroke="#c0c8c3" stroke-width="2" stroke-linecap="round"/></svg><span style="font:500 9px system-ui;color:#a4a9af">战绩</span></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><svg width="20" height="20" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="7.5" r="3.5" stroke="#c0c8c3" stroke-width="2"/><path d="M4.5 18a6.5 6.5 0 0 1 13 0" stroke="#c0c8c3" stroke-width="2" stroke-linecap="round"/></svg><span style="font:500 9px system-ui;color:#a4a9af">我的</span></div>
+    </div>
+    <!-- FAB -->
+    <div style="position:absolute;right:18px;bottom:74px;width:52px;height:52px;border-radius:50%;background:#16a34a;box-shadow:0 6px 18px rgba(22,163,74,.4);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4v14M4 11h14" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg></div>
+  </div>
+  <div style="margin-top:12px;font:400 11px/1.6 system-ui;color:#9aa0a6">绿头部带问候 + 个人速览。三态 Tab、活动卡含报名进度条。右下 <b style="color:#16a34a">悬浮 + 发起新局</b>。</div>
+</div>
+
+<!-- ===== 2 · 发起活动 ===== -->
+<div style="position:absolute;left:480px;top:150px;width:320px">
+  <div data-drags-parent="1" style="position:absolute;top:-22px;font:600 11px system-ui;color:#8b9097">② 发起活动</div>
+  <div style="position:relative;width:320px;height:690px;background:#f5f8f4;border-radius:34px;box-shadow:0 10px 36px rgba(20,40,28,.14);overflow:hidden;display:flex;flex-direction:column">
+    <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font:600 12px Barlow,system-ui;color:#9aa0a6;flex-shrink:0;background:#fff"><span>9:41</span><span style="width:16px;height:9px;border:1.2px solid #c0c8c3;border-radius:2px"></span></div>
+    <div style="height:48px;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;background:#fff;border-bottom:1px solid #f0f3f1"><span style="position:absolute;left:18px"><svg width="9" height="16" viewBox="0 0 9 16" fill="none"><path d="M8 1L1 8l7 7" stroke="#0b5e34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span style="font:600 16px 'PingFang SC',sans-serif;color:#15201a">发起活动</span></div>
+    <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font:500 11px system-ui;color:#80878f">活动标题</span><div style="height:44px;background:#fff;border:1.5px solid #16a34a;border-radius:12px;display:flex;align-items:center;padding:0 13px;font:500 14px 'PingFang SC',sans-serif;color:#15201a">周六晚 · 高手羽你局<span style="width:1.5px;height:16px;background:#16a34a;margin-left:1px"></span></div></div>
+      <div style="display:flex;gap:10px"><div style="flex:1;display:flex;flex-direction:column;gap:6px"><span style="font:500 11px system-ui;color:#80878f">开打时间</span><div style="height:44px;background:#fff;border:1px solid #e8ece9;border-radius:12px;display:flex;align-items:center;justify-content:space-between;padding:0 13px"><span style="font:500 13px system-ui;color:#15201a">周六 19:00</span><span style="font:400 11px system-ui;color:#c0c8c3">▾</span></div></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><span style="font:500 11px system-ui;color:#80878f">报名截止</span><div style="height:44px;background:#fff;border:1px solid #e8ece9;border-radius:12px;display:flex;align-items:center;justify-content:space-between;padding:0 13px"><span style="font:500 13px system-ui;color:#15201a">周六 12:00</span><span style="font:400 11px system-ui;color:#c0c8c3">▾</span></div></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font:500 11px system-ui;color:#80878f">场馆 / 地点</span><div style="height:44px;background:#fff;border:1px solid #e8ece9;border-radius:12px;display:flex;align-items:center;justify-content:space-between;padding:0 13px"><span style="font:500 13px system-ui;color:#15201a">奥森羽毛球馆</span><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 12.5s4.5-3.8 4.5-7.2A4.5 4.5 0 0 0 2.5 5.3C2.5 8.7 7 12.5 7 12.5Z" stroke="#16a34a" stroke-width="1.3"/><circle cx="7" cy="5.3" r="1.5" fill="#16a34a"/></svg></div></div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px"><span style="font:500 11px system-ui;color:#80878f">场地数</span><div style="height:44px;background:#fff;border:1px solid #e8ece9;border-radius:12px;display:flex;align-items:center;justify-content:space-between;padding:0 12px"><span style="width:24px;height:24px;border-radius:7px;background:#f0f3f1;display:flex;align-items:center;justify-content:center;font:600 16px system-ui;color:#80878f">−</span><span style="font:700 16px Barlow,system-ui;color:#15201a">3</span><span style="width:24px;height:24px;border-radius:7px;background:#e6f4ec;display:flex;align-items:center;justify-content:center;font:600 16px system-ui;color:#16a34a">+</span></div></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px"><span style="font:500 11px system-ui;color:#80878f">人数上限</span><div style="height:44px;background:#fff;border:1px solid #e8ece9;border-radius:12px;display:flex;align-items:center;justify-content:space-between;padding:0 12px"><span style="width:24px;height:24px;border-radius:7px;background:#f0f3f1;display:flex;align-items:center;justify-content:center;font:600 16px system-ui;color:#80878f">−</span><span style="font:700 16px Barlow,system-ui;color:#15201a">16</span><span style="width:24px;height:24px;border-radius:7px;background:#e6f4ec;display:flex;align-items:center;justify-content:center;font:600 16px system-ui;color:#16a34a">+</span></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font:500 11px system-ui;color:#80878f">玩法</span><div style="display:flex;background:#eef2f0;border-radius:12px;padding:3px"><div style="flex:1;height:36px;background:#16a34a;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:5px;font:600 13px system-ui;color:#fff;box-shadow:0 2px 6px rgba(22,163,74,.25)">双打 <span style="font:600 9px Barlow,system-ui;opacity:.8">2v2</span></div><div style="flex:1;height:36px;display:flex;align-items:center;justify-content:center;gap:5px;font:500 13px system-ui;color:#80878f">单打 <span style="font:600 9px Barlow,system-ui;opacity:.7">1v1</span></div></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font:500 11px system-ui;color:#80878f">默认分组模式</span><div style="display:flex;background:#eef2f0;border-radius:12px;padding:3px"><div style="flex:1;height:36px;background:#16a34a;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 13px system-ui;color:#fff;box-shadow:0 2px 6px rgba(22,163,74,.25)">智能平衡</div><div style="flex:1;height:36px;display:flex;align-items:center;justify-content:center;font:500 13px system-ui;color:#80878f">自动轮转</div></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font:500 11px system-ui;color:#80878f">备注（选填）</span><div style="height:50px;background:#fff;border:1px solid #e8ece9;border-radius:12px;padding:11px 13px;font:400 12px system-ui;color:#b6bcb8">自带球拍，AA 现场结…</div></div>
+    </div>
+    <div style="padding:14px 16px 18px;flex-shrink:0;background:#fff;border-top:1px solid #f0f3f1"><div style="height:48px;border-radius:14px;background:#16a34a;display:flex;align-items:center;justify-content:center;font:600 15px system-ui;color:#fff;box-shadow:0 6px 16px rgba(22,163,74,.3)">提交 · 生成分享卡</div></div>
+  </div>
+  <div style="margin-top:12px;font:400 11px/1.6 system-ui;color:#9aa0a6">聚焦态用绿描边 + 光标。Stepper 加号用绿。<b style="color:#16a34a">无费用字段</b>（红线不碰钱）。提交直达分享卡。</div>
+</div>
+
+<!-- ===== 3 · 活动详情 ===== -->
+<div style="position:absolute;left:880px;top:150px;width:320px">
+  <div data-drags-parent="1" style="position:absolute;top:-22px;font:600 11px system-ui;color:#8b9097">③ 活动详情（枢纽页）</div>
+  <div style="position:relative;width:320px;height:690px;background:#f5f8f4;border-radius:34px;box-shadow:0 10px 36px rgba(20,40,28,.14);overflow:hidden;display:flex;flex-direction:column">
+    <!-- hero -->
+    <div style="background:linear-gradient(150deg,#16a34a,#0b7a3b);padding:0 0 22px;position:relative;overflow:hidden">
+      <div style="position:absolute;right:-26px;top:-10px;width:120px;height:120px;border-radius:50%;background:rgba(215,242,107,.16)"></div>
+      <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font:600 12px Barlow,system-ui;color:rgba(255,255,255,.92)"><span style="display:flex;align-items:center;gap:0"><svg width="9" height="16" viewBox="0 0 9 16" fill="none"><path d="M8 1L1 8l7 7" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span style="width:16px;height:9px;border:1.2px solid rgba(255,255,255,.8);border-radius:2px"></span></div>
+      <div style="padding:8px 20px 0">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between"><div style="padding:3px 10px;border-radius:9px;background:rgba(215,242,107,.22);font:600 10px system-ui;color:#eaffb0">报名中 · 局长是你</div><div style="width:30px;height:30px;border-radius:10px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M11 5.5a2 2 0 1 0-1.9-2.6L6.5 4.4M5 8a2 2 0 1 0 0 .1M11 11.5a2 2 0 1 0-1.9 1.4L6.5 11.6" stroke="#fff" stroke-width="1.3"/></svg></div></div>
+        <div style="font:700 23px 'PingFang SC',sans-serif;color:#fff;margin-top:11px;letter-spacing:-.3px">周六晚 · 高手羽你局</div>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:9px;font:500 13px system-ui;color:#fff"><svg width="15" height="15" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="rgba(255,255,255,.7)" stroke-width="1.2"/><path d="M7 3.6V7l2.4 1.5" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/></svg>6月28日 周六 19:00–21:00</div>
+          <div style="display:flex;align-items:center;gap:9px;font:500 13px system-ui;color:#fff"><svg width="15" height="15" viewBox="0 0 14 14" fill="none"><path d="M7 13s5-4.3 5-8A5 5 0 0 0 2 5c0 3.7 5 8 5 8Z" stroke="rgba(255,255,255,.7)" stroke-width="1.2"/><circle cx="7" cy="5" r="1.6" fill="#fff"/></svg>奥森羽毛球馆 · 3 片场地</div>
+        </div>
+      </div>
+    </div>
+    <!-- body -->
+    <div style="flex:1;margin-top:-12px;background:#f5f8f4;border-radius:18px 18px 0 0;padding:16px;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+      <div style="background:#fff;border-radius:16px;padding:15px;box-shadow:0 2px 10px rgba(20,40,28,.05);display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:700 14px 'PingFang SC',sans-serif;color:#15201a">报名名单</span><span style="font:700 13px Barlow,system-ui;color:#16a34a">8 <span style="color:#b6bcb8">/ 16</span></span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:9px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:38px;height:38px;border-radius:50%;background:#cfe3d6;display:flex;align-items:center;justify-content:center;font:600 13px system-ui;color:#0b5e34">林</div><span style="font:400 8px system-ui;color:#9aa0a6">局长</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:38px;height:38px;border-radius:50%;background:#dde7e1;display:flex;align-items:center;justify-content:center;font:600 13px system-ui;color:#5b6b61">王</div><span style="font:400 8px system-ui;color:transparent">·</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:38px;height:38px;border-radius:50%;background:#d6e0da;display:flex;align-items:center;justify-content:center;font:600 13px system-ui;color:#5b6b61">陈</div><span style="font:400 8px system-ui;color:transparent">·</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:38px;height:38px;border-radius:50%;background:#dde7e1;display:flex;align-items:center;justify-content:center;font:600 13px system-ui;color:#5b6b61">赵</div><span style="font:400 8px system-ui;color:transparent">·</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:38px;height:38px;border-radius:50%;background:#d6e0da;display:flex;align-items:center;justify-content:center;font:600 13px system-ui;color:#5b6b61">周</div><span style="font:400 8px system-ui;color:transparent">·</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:38px;height:38px;border-radius:50%;background:#dde7e1;display:flex;align-items:center;justify-content:center;font:600 13px system-ui;color:#5b6b61">李</div><span style="font:400 8px system-ui;color:transparent">·</span></div>
+          <div style="width:38px;height:38px;border-radius:50%;background:#f0f3f1;border:1.5px dashed #cdd5d0;display:flex;align-items:center;justify-content:center;font:600 13px system-ui;color:#b6bcb8">+2</div>
+        </div>
+        <div style="display:flex;gap:8px;padding-top:2px;border-top:1px solid #f2f5f3"><span style="font:500 10px system-ui;color:#80878f;padding-top:8px">候补 <b style="color:#cc8a4a">2</b></span><span style="font:500 10px system-ui;color:#80878f;padding-top:8px;margin-left:6px">请假 <b style="color:#9aa0a6">1</b></span></div>
+      </div>
+      <div style="margin-top:auto;display:flex;gap:9px"><div style="width:50px;height:48px;border-radius:14px;background:#fff;border:1px solid #e8ece9;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M14 3l3 3-9 9-4 1 1-4 9-9Z" stroke="#80878f" stroke-width="1.4" stroke-linejoin="round"/></svg></div><div style="flex:1;height:48px;border-radius:14px;background:#16a34a;display:flex;align-items:center;justify-content:center;font:600 15px system-ui;color:#fff;box-shadow:0 6px 16px rgba(22,163,74,.3)">开始签到 / 分组</div></div>
+    </div>
+  </div>
+  <div style="margin-top:12px;font:400 11px/1.6 system-ui;color:#9aa0a6">枢纽页。绿 Hero 罩信息 + <b style="color:#16a34a">头像墙</b>（局长角标 / 候补 / 请假）。底部局长操作区，球友态改为「报名 / +1 / 请假」。</div>
+</div>
+
+
+<!-- ===== 4 · 签到/出勤 ===== -->
+<div style="position:absolute;left:1280px;top:150px;width:320px">
+  <div data-drags-parent="1" style="position:absolute;top:-22px;font:600 11px system-ui;color:#8b9097">④ 签到 / 出勤</div>
+  <div style="position:relative;width:320px;height:690px;background:#f5f8f4;border-radius:34px;box-shadow:0 10px 36px rgba(20,40,28,.14);overflow:hidden;display:flex;flex-direction:column">
+    <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font:600 12px Barlow,system-ui;color:#9aa0a6;flex-shrink:0;background:#fff"><span>9:41</span><span style="width:16px;height:9px;border:1.2px solid #c0c8c3;border-radius:2px"></span></div>
+    <div style="height:48px;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;background:#fff;border-bottom:1px solid #f0f3f1"><span style="position:absolute;left:18px"><svg width="9" height="16" viewBox="0 0 9 16" fill="none"><path d="M8 1L1 8l7 7" stroke="#0b5e34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span style="font:600 16px 'PingFang SC',sans-serif;color:#15201a">签到 · 确定参赛</span></div>
+    <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:500 11px system-ui;color:#80878f">已到 <b style="color:#16a34a;font-family:Barlow">7</b> / 8</span><span style="font:500 11px system-ui;color:#16a34a">全选</span></div>
+      <!-- checked person -->
+      <div style="background:#fff;border-radius:13px;padding:11px 13px;box-shadow:0 1px 6px rgba(20,40,28,.04);display:flex;align-items:center;gap:11px"><div style="width:24px;height:24px;border-radius:8px;background:#16a34a;display:flex;align-items:center;justify-content:center"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M3 7.5l2.5 2.5L11 4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="width:34px;height:34px;border-radius:50%;background:#cfe3d6;display:flex;align-items:center;justify-content:center;font:600 13px system-ui;color:#0b5e34">林</div><div style="flex:1"><div style="font:600 14px 'PingFang SC',sans-serif;color:#15201a">林丹丹</div><div style="font:400 10px system-ui;color:#9aa0a6">局长</div></div><div style="padding:5px 11px;border-radius:9px;background:#f0f3f1;font:600 11px system-ui;color:#5b6b61">中羽 L3 ▾</div></div>
+      <div style="background:#fff;border-radius:13px;padding:11px 13px;box-shadow:0 1px 6px rgba(20,40,28,.04);display:flex;align-items:center;gap:11px"><div style="width:24px;height:24px;border-radius:8px;background:#16a34a;display:flex;align-items:center;justify-content:center"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M3 7.5l2.5 2.5L11 4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="width:34px;height:34px;border-radius:50%;background:#dde7e1;display:flex;align-items:center;justify-content:center;font:600 13px system-ui;color:#5b6b61">王</div><div style="flex:1"><div style="font:600 14px 'PingFang SC',sans-serif;color:#15201a">王小明</div></div><div style="padding:5px 11px;border-radius:9px;background:#f0f3f1;font:600 11px system-ui;color:#5b6b61">中羽 L4 ▾</div></div>
+      <!-- unchecked / 请假 -->
+      <div style="background:#fff;border-radius:13px;padding:11px 13px;box-shadow:0 1px 6px rgba(20,40,28,.04);display:flex;align-items:center;gap:11px;opacity:.55"><div style="width:24px;height:24px;border-radius:8px;background:#fff;border:1.5px solid #d3dad6"></div><div style="width:34px;height:34px;border-radius:50%;background:#dde7e1;display:flex;align-items:center;justify-content:center;font:600 13px system-ui;color:#5b6b61">陈</div><div style="flex:1"><div style="font:600 14px 'PingFang SC',sans-serif;color:#15201a">陈大锤</div></div><div style="padding:5px 11px;border-radius:9px;background:#fdf0e3;font:600 11px system-ui;color:#cc8a4a">请假</div></div>
+      <div style="background:#fff;border-radius:13px;padding:11px 13px;box-shadow:0 1px 6px rgba(20,40,28,.04);display:flex;align-items:center;gap:11px"><div style="width:24px;height:24px;border-radius:8px;background:#16a34a;display:flex;align-items:center;justify-content:center"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M3 7.5l2.5 2.5L11 4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="width:34px;height:34px;border-radius:50%;background:#d6e0da;display:flex;align-items:center;justify-content:center;font:600 13px system-ui;color:#5b6b61">赵</div><div style="flex:1"><div style="font:600 14px 'PingFang SC',sans-serif;color:#15201a">赵敏</div></div><div style="padding:5px 11px;border-radius:9px;background:#f0f3f1;font:600 11px system-ui;color:#5b6b61">中羽 L2 ▾</div></div>
+      <div style="height:42px;border:1.5px dashed #cdd5d0;border-radius:13px;display:flex;align-items:center;justify-content:center;gap:7px;font:500 12px system-ui;color:#80878f"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="#80878f" stroke-width="1.6" stroke-linecap="round"/></svg>添加临时球友（无微信占位）</div>
+      <div style="margin-top:2px;padding:11px 13px;background:#eef6f0;border-radius:13px;display:flex;align-items:center;justify-content:space-between"><span style="font:500 11px system-ui;color:#16a34a">候补 2 人 · 可补位</span><span style="font:600 11px system-ui;color:#16a34a">补位 ›</span></div>
+    </div>
+    <div style="padding:14px 16px 18px;flex-shrink:0;background:#fff;border-top:1px solid #f0f3f1"><div style="height:48px;border-radius:14px;background:#16a34a;display:flex;align-items:center;justify-content:center;font:600 15px system-ui;color:#fff;box-shadow:0 6px 16px rgba(22,163,74,.3)">确认参赛 12 人 · 去分组 →</div></div>
+  </div>
+  <div style="margin-top:12px;font:400 11px/1.6 system-ui;color:#9aa0a6">签到名单 = 分组输入。绿勾实到、改本场水平、<b style="color:#16a34a">候补补位</b>、加临时球友（Guest）。自助签到同此清单。</div>
+</div>
+
+<!-- ===== 5 · 分组排兵 ★ ===== -->
+<div style="position:absolute;left:80px;top:1010px;width:320px">
+  <div data-drags-parent="1" style="position:absolute;top:-22px;font:600 11px system-ui;color:#16a34a">⑤ 分组排兵 ★ 差异化核心</div>
+  <div style="position:relative;width:320px;height:690px;background:#f5f8f4;border-radius:34px;box-shadow:0 14px 40px rgba(22,163,74,.18);overflow:hidden;display:flex;flex-direction:column;border:1.5px solid #16a34a">
+    <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font:600 12px Barlow,system-ui;color:#9aa0a6;flex-shrink:0;background:#fff"><span>9:41</span><span style="width:16px;height:9px;border:1.2px solid #c0c8c3;border-radius:2px"></span></div>
+    <div style="height:48px;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;background:#fff;border-bottom:1px solid #f0f3f1"><span style="position:absolute;left:18px"><svg width="9" height="16" viewBox="0 0 9 16" fill="none"><path d="M8 1L1 8l7 7" stroke="#0b5e34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span style="font:600 16px 'PingFang SC',sans-serif;color:#15201a">分组排兵</span></div>
+    <div style="flex:1;padding:14px;display:flex;flex-direction:column;gap:8px;overflow:hidden">
+      <!-- steps -->
+      <div style="display:flex;align-items:center;justify-content:space-between;font:600 9px system-ui"><span style="color:#16a34a">①选人</span><span style="color:#cdd5d0">›</span><span style="color:#16a34a">②玩法</span><span style="color:#cdd5d0">›</span><span style="color:#16a34a">③模式</span><span style="color:#cdd5d0">›</span><span style="color:#16a34a">④设置</span><span style="color:#cdd5d0">›</span><span style="color:#15201a">⑤看板</span><span style="color:#cdd5d0">›</span><span style="color:#9aa0a6">微调</span></div>
+      <!-- 玩法 toggle -->
+      <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 10px system-ui;color:#80878f">玩法</span><div style="display:flex;background:#eef2f0;border-radius:11px;padding:3px"><div style="flex:1;height:34px;background:#16a34a;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:6px;font:600 13px system-ui;color:#fff;box-shadow:0 2px 6px rgba(22,163,74,.25)">双打 <span style="font:700 9px Barlow,system-ui;opacity:.85">2v2</span></div><div style="flex:1;height:34px;display:flex;align-items:center;justify-content:center;gap:6px;font:500 13px system-ui;color:#80878f">单打 <span style="font:700 9px Barlow,system-ui;opacity:.7">1v1</span></div></div></div>
+      <!-- 模式 toggle -->
+      <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 10px system-ui;color:#80878f">分组模式</span><div style="display:flex;background:#eef2f0;border-radius:11px;padding:3px"><div style="flex:1;height:34px;background:#0b5e34;border-radius:8px;display:flex;align-items:center;justify-content:center;font:600 12px system-ui;color:#fff">智能平衡</div><div style="flex:1;height:34px;display:flex;align-items:center;justify-content:center;font:500 12px system-ui;color:#80878f">自动轮转</div></div></div>
+      <!-- settings -->
+      <div style="display:flex;gap:8px"><div style="flex:1;background:#fff;border-radius:11px;padding:8px 10px;box-shadow:0 1px 6px rgba(20,40,28,.04)"><div style="font:500 9px system-ui;color:#9aa0a6">场地</div><div style="font:700 17px Barlow,system-ui;color:#15201a">3</div></div><div style="flex:1;background:#fff;border-radius:11px;padding:8px 10px;box-shadow:0 1px 6px rgba(20,40,28,.04)"><div style="font:500 9px system-ui;color:#9aa0a6">轮数</div><div style="font:700 17px Barlow,system-ui;color:#15201a">6</div></div><div style="flex:1.2;background:#fff;border-radius:11px;padding:8px 10px;box-shadow:0 1px 6px rgba(20,40,28,.04);display:flex;align-items:center;justify-content:space-between"><div><div style="font:500 9px system-ui;color:#9aa0a6">混双</div><div style="font:600 11px system-ui;color:#15201a">开</div></div><div style="width:30px;height:17px;border-radius:9px;background:#16a34a;position:relative"><div style="position:absolute;top:2px;right:2px;width:13px;height:13px;border-radius:50%;background:#fff"></div></div></div></div>
+      <!-- schedule summary -->
+      <div style="display:flex;align-items:center;justify-content:space-around;padding:9px 8px;background:#eef6f0;border-radius:11px">
+        <div style="text-align:center"><div style="font:700 16px Barlow,system-ui;color:#0b7a3b">6</div><div style="font:500 9px system-ui;color:#5b8a6e">轮</div></div>
+        <div style="width:1px;height:20px;background:#cfe3d6"></div>
+        <div style="text-align:center"><div style="font:700 16px Barlow,system-ui;color:#0b7a3b">18</div><div style="font:500 9px system-ui;color:#5b8a6e">总场次</div></div>
+        <div style="width:1px;height:20px;background:#cfe3d6"></div>
+        <div style="text-align:center"><div style="font:700 16px Barlow,system-ui;color:#0b7a3b">4–5</div><div style="font:500 9px system-ui;color:#5b8a6e">人均场次</div></div>
+        <div style="width:1px;height:20px;background:#cfe3d6"></div>
+        <div style="text-align:center"><div style="font:700 16px Barlow,system-ui;color:#0b7a3b">2</div><div style="font:500 9px system-ui;color:#5b8a6e">轮空/轮</div></div>
+      </div>
+      <!-- round chips -->
+      <div style="display:flex;gap:6px">
+        <div style="flex:1;height:26px;border-radius:8px;background:#fff;border:1px solid #e8ece9;display:flex;align-items:center;justify-content:center;font:600 11px Barlow,system-ui;color:#80878f">R1</div>
+        <div style="flex:1;height:26px;border-radius:8px;background:#0b5e34;display:flex;align-items:center;justify-content:center;font:600 11px Barlow,system-ui;color:#fff">R2</div>
+        <div style="flex:1;height:26px;border-radius:8px;background:#fff;border:1px solid #e8ece9;display:flex;align-items:center;justify-content:center;font:600 11px Barlow,system-ui;color:#80878f">R3</div>
+        <div style="flex:1;height:26px;border-radius:8px;background:#fff;border:1px solid #e8ece9;display:flex;align-items:center;justify-content:center;font:600 11px Barlow,system-ui;color:#80878f">R4</div>
+        <div style="flex:1;height:26px;border-radius:8px;background:#fff;border:1px solid #e8ece9;display:flex;align-items:center;justify-content:center;font:600 11px Barlow,system-ui;color:#80878f">R5</div>
+        <div style="flex:1;height:26px;border-radius:8px;background:#fff;border:1px solid #e8ece9;display:flex;align-items:center;justify-content:center;font:600 11px Barlow,system-ui;color:#80878f">R6</div>
+      </div>
+      <div style="font:500 10px system-ui;color:#80878f;display:flex;justify-content:space-between"><span>第 2 轮对阵</span><span style="color:#16a34a">⟳ 重排本轮</span></div>
+      <div style="background:#fff;border-radius:13px;padding:12px;box-shadow:0 1px 6px rgba(20,40,28,.04);display:flex;flex-direction:column;gap:9px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 11px system-ui;color:#15201a">场地 1</span><span style="font:600 8px system-ui;color:#16a34a;background:#e6f4ec;padding:2px 7px;border-radius:6px">实力差 2 · 均衡</span></div>
+        <div style="display:flex;align-items:center;gap:7px">
+          <div style="flex:1;display:flex;gap:5px"><div style="flex:1;height:34px;background:#eef6f0;border:1px solid #cfe3d6;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:4px;font:600 11px system-ui;color:#0b5e34">林<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><circle cx="2" cy="2" r="1" fill="#9bbfa9"/><circle cx="2" cy="5" r="1" fill="#9bbfa9"/><circle cx="2" cy="8" r="1" fill="#9bbfa9"/><circle cx="5" cy="2" r="1" fill="#9bbfa9"/><circle cx="5" cy="5" r="1" fill="#9bbfa9"/><circle cx="5" cy="8" r="1" fill="#9bbfa9"/></svg></div><div style="flex:1;height:34px;background:#eef6f0;border:1px solid #cfe3d6;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:4px;font:600 11px system-ui;color:#0b5e34">赵<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><circle cx="2" cy="2" r="1" fill="#9bbfa9"/><circle cx="2" cy="5" r="1" fill="#9bbfa9"/><circle cx="2" cy="8" r="1" fill="#9bbfa9"/><circle cx="5" cy="2" r="1" fill="#9bbfa9"/><circle cx="5" cy="5" r="1" fill="#9bbfa9"/><circle cx="5" cy="8" r="1" fill="#9bbfa9"/></svg></div></div>
+          <span style="font:700 11px Barlow,system-ui;color:#c0c8c3">VS</span>
+          <div style="flex:1;display:flex;gap:5px"><div style="flex:1;height:34px;background:#f3f5f4;border:1px solid #e3e8e5;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 11px system-ui;color:#5b6b61">王</div><div style="flex:1;height:34px;background:#f3f5f4;border:1px solid #e3e8e5;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 11px system-ui;color:#5b6b61">周</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:3px;border-top:1px dashed #eef2f0"><span style="font:600 11px system-ui;color:#15201a">场地 2</span><span style="font:600 8px system-ui;color:#16a34a;background:#e6f4ec;padding:2px 7px;border-radius:6px">实力差 1</span></div>
+        <div style="display:flex;align-items:center;gap:7px"><div style="flex:1;display:flex;gap:5px"><div style="flex:1;height:30px;background:#eef6f0;border:1px solid #cfe3d6;border-radius:8px"></div><div style="flex:1;height:30px;background:#eef6f0;border:1px solid #cfe3d6;border-radius:8px"></div></div><span style="font:700 10px Barlow,system-ui;color:#c0c8c3">VS</span><div style="flex:1;display:flex;gap:5px"><div style="flex:1;height:30px;background:#f3f5f4;border:1px solid #e3e8e5;border-radius:8px"></div><div style="flex:1;height:30px;background:#f3f5f4;border:1px solid #e3e8e5;border-radius:8px"></div></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font:500 9px system-ui;color:#9aa0a6"><span style="background:#fdf0e3;color:#cc8a4a;padding:2px 7px;border-radius:6px;font-weight:600">轮空</span> 本轮 2 人休息（出场已均衡）· 拖拽头像换人</div>
+    </div>
+    <div style="padding:13px 14px 17px;flex-shrink:0;background:#fff;border-top:1px solid #f0f3f1;display:flex;gap:9px"><div style="flex:1;height:46px;border-radius:13px;border:1.5px solid #16a34a;display:flex;align-items:center;justify-content:center;font:600 13px system-ui;color:#16a34a">重新生成</div><div style="flex:1.4;height:46px;border-radius:13px;background:#16a34a;display:flex;align-items:center;justify-content:center;font:600 14px system-ui;color:#fff;box-shadow:0 6px 16px rgba(22,163,74,.3)">确认开打</div></div>
+  </div>
+  <div style="margin-top:12px;font:400 11px/1.6 system-ui;color:#9aa0a6">五步走，<b style="color:#16a34a">玩法（双打 2v2 / 单打 1v1）</b>与模式（平衡 / 轮转）独立选择。顶部<b style="color:#16a34a">赛程总览</b>（共几轮·几场·人均场次）+ 轮次 R1–R6 切换逐轮看对阵。算法给草稿，<b style="color:#16a34a">人拖拽拍板</b>。</div>
+</div>
+
+<!-- 单打 mini preview note -->
+<div style="position:absolute;left:480px;top:1890px;width:215px;background:#fff;border-radius:14px;padding:13px;box-shadow:0 6px 20px rgba(20,40,28,.10);border:1px solid #eef2f0">
+  <div style="font:600 11px system-ui;color:#16a34a;margin-bottom:9px">切到「单打」时 · 1v1 看板</div>
+  <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:34px;background:#eef6f0;border:1px solid #cfe3d6;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 12px system-ui;color:#0b5e34">林</div><span style="font:700 11px Barlow,system-ui;color:#c0c8c3">VS</span><div style="flex:1;height:34px;background:#f3f5f4;border:1px solid #e3e8e5;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 12px system-ui;color:#5b6b61">王</div></div>
+  <div style="margin-top:9px;font:400 10px/1.5 system-ui;color:#9aa0a6">单人对单人，每片场地仅 2 人。平衡按个人水平捉对，轮转出个人天梯。其余流程（签到 / 计分 / 战绩）完全复用。</div>
+</div>
+<div style="position:absolute;left:480px;top:2095px;width:215px;background:#fef4a8;padding:12px 13px;font:500 11px/1.5 system-ui;color:#6b5e1f;box-shadow:0 2px 6px rgba(0,0,0,.10);transform:rotate(-1.2deg)">★ 玩法与分组模式正交：双打/单打 × 平衡/轮转 共 4 种组合，同一引擎产出。</div>
+
+<!-- ===== 6 · 对阵看板 ===== -->
+<div style="position:absolute;left:480px;top:1010px;width:320px">
+  <div data-drags-parent="1" style="position:absolute;top:-22px;font:600 11px system-ui;color:#8b9097">⑥ 对阵看板（进行中）</div>
+  <div style="position:relative;width:320px;height:690px;background:#f5f8f4;border-radius:34px;box-shadow:0 10px 36px rgba(20,40,28,.14);overflow:hidden;display:flex;flex-direction:column">
+    <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font:600 12px Barlow,system-ui;color:#9aa0a6;flex-shrink:0;background:#fff"><span>9:41</span><span style="width:16px;height:9px;border:1.2px solid #c0c8c3;border-radius:2px"></span></div>
+    <div style="height:48px;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;background:#fff;border-bottom:1px solid #f0f3f1"><span style="position:absolute;left:18px"><svg width="9" height="16" viewBox="0 0 9 16" fill="none"><path d="M8 1L1 8l7 7" stroke="#0b5e34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span style="font:600 16px 'PingFang SC',sans-serif;color:#15201a">对阵看板</span></div>
+    <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+      <!-- round switcher -->
+      <div style="background:#fff;border-radius:13px;padding:5px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 6px rgba(20,40,28,.04)"><span style="width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#c0c8c3">‹</span><span style="font:700 13px 'PingFang SC',sans-serif;color:#15201a">第 2 轮 <span style="font:400 11px system-ui;color:#9aa0a6">/ 共 6 轮</span></span><span style="width:32px;height:32px;border-radius:9px;background:#eef6f0;display:flex;align-items:center;justify-content:center;font:600 14px system-ui;color:#16a34a">›</span></div>
+      <!-- court in progress -->
+      <div style="background:#fff;border-radius:16px;padding:15px;box-shadow:0 2px 12px rgba(22,163,74,.08);border:1.5px solid #cfe3d6;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:700 13px 'PingFang SC',sans-serif;color:#15201a">场地 1</span><span style="font:600 10px system-ui;color:#16a34a;background:#e6f4ec;padding:3px 9px;border-radius:8px">● 进行中</span></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:6px"><div style="width:26px;height:26px;border-radius:50%;background:#cfe3d6;display:flex;align-items:center;justify-content:center;font:600 11px system-ui;color:#0b5e34">林</div><span style="font:600 12px system-ui;color:#15201a">林丹丹</span></div><div style="display:flex;align-items:center;gap:6px"><div style="width:26px;height:26px;border-radius:50%;background:#dde7e1;display:flex;align-items:center;justify-content:center;font:600 11px system-ui;color:#5b6b61">赵</div><span style="font:600 12px system-ui;color:#15201a">赵敏</span></div></div>
+          <span style="font:700 13px Barlow,system-ui;color:#c0c8c3">VS</span>
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px;align-items:flex-end"><div style="display:flex;align-items:center;gap:6px"><span style="font:600 12px system-ui;color:#15201a">王小明</span><div style="width:26px;height:26px;border-radius:50%;background:#d6e0da;display:flex;align-items:center;justify-content:center;font:600 11px system-ui;color:#5b6b61">王</div></div><div style="display:flex;align-items:center;gap:6px"><span style="font:600 12px system-ui;color:#15201a">周杰</span><div style="width:26px;height:26px;border-radius:50%;background:#dde7e1;display:flex;align-items:center;justify-content:center;font:600 11px system-ui;color:#5b6b61">周</div></div></div>
+        </div>
+        <div style="height:40px;border-radius:11px;background:#16a34a;display:flex;align-items:center;justify-content:center;gap:7px;font:600 13px system-ui;color:#fff;box-shadow:0 4px 12px rgba(22,163,74,.25)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M5 3v10l8-5-8-5Z" fill="#fff"/></svg>进入计分</div>
+      </div>
+      <!-- court done -->
+      <div style="background:#fff;border-radius:16px;padding:15px;box-shadow:0 1px 6px rgba(20,40,28,.04);display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:700 13px 'PingFang SC',sans-serif;color:#15201a">场地 2</span><span style="font:600 10px system-ui;color:#9aa0a6;background:#f0f3f1;padding:3px 9px;border-radius:8px">已结束</span></div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:14px"><div style="display:flex"><div style="width:24px;height:24px;border-radius:50%;background:#cfe3d6;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font:600 10px system-ui;color:#0b5e34">陈</div><div style="width:24px;height:24px;border-radius:50%;background:#dde7e1;border:1.5px solid #fff;margin-left:-7px;display:flex;align-items:center;justify-content:center;font:600 10px system-ui;color:#5b6b61">李</div></div><span style="font:700 22px Barlow Semi Condensed,sans-serif;color:#16a34a">21<span style="color:#c0c8c3"> : </span><span style="color:#9aa0a6">17</span></span><div style="display:flex"><div style="width:24px;height:24px;border-radius:50%;background:#d6e0da;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font:600 10px system-ui;color:#5b6b61">吴</div><div style="width:24px;height:24px;border-radius:50%;background:#dde7e1;border:1.5px solid #fff;margin-left:-7px;display:flex;align-items:center;justify-content:center;font:600 10px system-ui;color:#5b6b61">郑</div></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:7px;font:500 10px system-ui;color:#9aa0a6"><span style="background:#fdf0e3;color:#cc8a4a;padding:3px 8px;border-radius:7px;font-weight:600">轮空</span> 张三、孙六 本轮休息</div>
+    </div>
+  </div>
+  <div style="margin-top:12px;font:400 11px/1.6 system-ui;color:#9aa0a6">各场地对局卡 + 本轮/下一轮切换 + <b style="color:#16a34a">轮空提示</b>。进行中卡描绿边、点进计分。球友视角能看「我下一场在哪片」。</div>
+</div>
+
+<!-- ===== 7 · 计分录入 ===== -->
+<div style="position:absolute;left:880px;top:1010px;width:320px">
+  <div data-drags-parent="1" style="position:absolute;top:-22px;font:600 11px system-ui;color:#8b9097">⑦ 计分录入</div>
+  <div style="position:relative;width:320px;height:690px;background:#f5f8f4;border-radius:34px;box-shadow:0 10px 36px rgba(20,40,28,.14);overflow:hidden;display:flex;flex-direction:column">
+    <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font:600 12px Barlow,system-ui;color:#9aa0a6;flex-shrink:0;background:#fff"><span>9:41</span><span style="width:16px;height:9px;border:1.2px solid #c0c8c3;border-radius:2px"></span></div>
+    <div style="height:48px;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;background:#fff;border-bottom:1px solid #f0f3f1"><span style="position:absolute;left:18px"><svg width="9" height="16" viewBox="0 0 9 16" fill="none"><path d="M8 1L1 8l7 7" stroke="#0b5e34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span style="font:600 16px 'PingFang SC',sans-serif;color:#15201a">场地 1 · 计分</span></div>
+    <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+      <!-- score -->
+      <div style="background:#fff;border-radius:18px;padding:18px 14px;box-shadow:0 2px 12px rgba(20,40,28,.06);display:flex;align-items:stretch;gap:8px">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px"><div style="display:flex"><div style="width:28px;height:28px;border-radius:50%;background:#cfe3d6;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font:600 11px system-ui;color:#0b5e34">林</div><div style="width:28px;height:28px;border-radius:50%;background:#dde7e1;border:1.5px solid #fff;margin-left:-8px;display:flex;align-items:center;justify-content:center;font:600 11px system-ui;color:#5b6b61">赵</div></div><span style="font:600 11px system-ui;color:#80878f">林 · 赵</span><div style="font:700 58px Barlow Semi Condensed,sans-serif;color:#16a34a;line-height:.85">21</div></div>
+        <div style="display:flex;align-items:center;font:700 22px Barlow,system-ui;color:#d3dad6">:</div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px"><div style="display:flex"><div style="width:28px;height:28px;border-radius:50%;background:#d6e0da;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font:600 11px system-ui;color:#5b6b61">王</div><div style="width:28px;height:28px;border-radius:50%;background:#dde7e1;border:1.5px solid #fff;margin-left:-8px;display:flex;align-items:center;justify-content:center;font:600 11px system-ui;color:#5b6b61">周</div></div><span style="font:600 11px system-ui;color:#80878f">王 · 周</span><div style="font:700 58px Barlow Semi Condensed,sans-serif;color:#c0c8c3;line-height:.85">18</div></div>
+      </div>
+      <!-- big +/- -->
+      <div style="display:flex;gap:11px">
+        <div style="flex:1;display:flex;flex-direction:column;gap:9px"><div style="height:58px;border-radius:15px;background:#16a34a;display:flex;align-items:center;justify-content:center;font:700 26px system-ui;color:#fff;box-shadow:0 5px 14px rgba(22,163,74,.28)">+1</div><div style="height:42px;border-radius:13px;background:#f0f3f1;display:flex;align-items:center;justify-content:center;font:700 19px system-ui;color:#9aa0a6">−1</div></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:9px"><div style="height:58px;border-radius:15px;background:#eef2f0;border:1.5px solid #d3dad6;display:flex;align-items:center;justify-content:center;font:700 26px system-ui;color:#5b6b61">+1</div><div style="height:42px;border-radius:13px;background:#f0f3f1;display:flex;align-items:center;justify-content:center;font:700 19px system-ui;color:#9aa0a6">−1</div></div>
+      </div>
+      <div style="height:38px;border:1.5px dashed #cdd5d0;border-radius:12px;display:flex;align-items:center;justify-content:center;font:500 12px system-ui;color:#80878f">或 直接填比分</div>
+      <div style="margin-top:auto;display:flex;gap:10px"><div style="flex:1;height:48px;border-radius:14px;border:1.5px solid #d3dad6;display:flex;align-items:center;justify-content:center;font:600 13px system-ui;color:#80878f">改判</div><div style="flex:1.5;height:48px;border-radius:14px;background:#16a34a;display:flex;align-items:center;justify-content:center;gap:7px;font:600 14px system-ui;color:#fff;box-shadow:0 6px 16px rgba(22,163,74,.3)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.5 3.5L13 4.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>确认胜负</div></div>
+    </div>
+  </div>
+  <div style="margin-top:12px;font:400 11px/1.6 system-ui;color:#9aa0a6"><b style="color:#16a34a">大字比分 + 大按钮</b> +1/−1（≥44px 触达），或直接填比分。确认定胜负，支持改判。单打时每队仅 1 个头像。</div>
+</div>
+
+<!-- ===== 8 · 本场结算 ===== -->
+<div style="position:absolute;left:1280px;top:1010px;width:320px">
+  <div data-drags-parent="1" style="position:absolute;top:-22px;font:600 11px system-ui;color:#8b9097">⑧ 本场结算（今日榜）</div>
+  <div style="position:relative;width:320px;height:690px;background:#f5f8f4;border-radius:34px;box-shadow:0 10px 36px rgba(20,40,28,.14);overflow:hidden;display:flex;flex-direction:column">
+    <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font:600 12px Barlow,system-ui;color:#9aa0a6;flex-shrink:0;background:#fff"><span>9:41</span><span style="width:16px;height:9px;border:1.2px solid #c0c8c3;border-radius:2px"></span></div>
+    <div style="height:48px;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;background:#fff;border-bottom:1px solid #f0f3f1"><span style="position:absolute;left:18px"><svg width="9" height="16" viewBox="0 0 9 16" fill="none"><path d="M8 1L1 8l7 7" stroke="#0b5e34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span style="font:600 16px 'PingFang SC',sans-serif;color:#15201a">本场结算</span></div>
+    <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+      <!-- MVP -->
+      <div style="border-radius:16px;padding:15px;background:linear-gradient(135deg,#0b5e34,#16a34a);position:relative;overflow:hidden;display:flex;align-items:center;gap:13px"><div style="position:absolute;right:-20px;top:-20px;width:90px;height:90px;border-radius:50%;background:rgba(215,242,107,.18)"></div><div style="width:48px;height:48px;border-radius:50%;background:#d7f26b;display:flex;align-items:center;justify-content:center;font:700 18px system-ui;color:#0b5e34">林</div><div style="flex:1"><div style="font:600 11px system-ui;color:#d7f26b">🏆 本场 MVP</div><div style="font:700 17px 'PingFang SC',sans-serif;color:#fff;margin-top:2px">林丹丹</div></div><div style="text-align:right"><div style="font:700 26px Barlow Semi Condensed,sans-serif;color:#d7f26b;line-height:1">5胜</div><div style="font:400 9px system-ui;color:rgba(255,255,255,.7)">+38 分</div></div></div>
+      <!-- today rank -->
+      <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:700 13px 'PingFang SC',sans-serif;color:#15201a">今日榜</span><span style="font:500 10px system-ui;color:#9aa0a6">个人积分制</span></div>
+      <div style="background:#fff;border-radius:16px;padding:6px;box-shadow:0 1px 6px rgba(20,40,28,.04);display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:11px;padding:10px 11px"><span style="width:22px;height:22px;border-radius:7px;background:#16a34a;display:flex;align-items:center;justify-content:center;font:700 12px Barlow,system-ui;color:#fff">1</span><div style="width:30px;height:30px;border-radius:50%;background:#cfe3d6;display:flex;align-items:center;justify-content:center;font:600 12px system-ui;color:#0b5e34">林</div><span style="flex:1;font:600 13px 'PingFang SC',sans-serif;color:#15201a">林丹丹</span><span style="font:700 14px Barlow,system-ui;color:#16a34a">+38</span></div>
+        <div style="height:1px;background:#f2f5f3;margin:0 11px"></div>
+        <div style="display:flex;align-items:center;gap:11px;padding:10px 11px"><span style="width:22px;height:22px;border-radius:7px;background:#eef2f0;display:flex;align-items:center;justify-content:center;font:700 12px Barlow,system-ui;color:#80878f">2</span><div style="width:30px;height:30px;border-radius:50%;background:#dde7e1;display:flex;align-items:center;justify-content:center;font:600 12px system-ui;color:#5b6b61">王</div><span style="flex:1;font:600 13px 'PingFang SC',sans-serif;color:#15201a">王小明</span><span style="font:700 14px Barlow,system-ui;color:#5b6b61">+31</span></div>
+        <div style="height:1px;background:#f2f5f3;margin:0 11px"></div>
+        <div style="display:flex;align-items:center;gap:11px;padding:10px 11px"><span style="width:22px;height:22px;border-radius:7px;background:#eef2f0;display:flex;align-items:center;justify-content:center;font:700 12px Barlow,system-ui;color:#80878f">3</span><div style="width:30px;height:30px;border-radius:50%;background:#d6e0da;display:flex;align-items:center;justify-content:center;font:600 12px system-ui;color:#5b6b61">周</div><span style="flex:1;font:600 13px 'PingFang SC',sans-serif;color:#15201a">周杰</span><span style="font:700 14px Barlow,system-ui;color:#5b6b61">+27</span></div>
+        <div style="height:1px;background:#f2f5f3;margin:0 11px"></div>
+        <div style="display:flex;align-items:center;gap:11px;padding:10px 11px;opacity:.65"><span style="width:22px;height:22px;border-radius:7px;background:#eef2f0;display:flex;align-items:center;justify-content:center;font:700 12px Barlow,system-ui;color:#a4a9af">4</span><div style="width:30px;height:30px;border-radius:50%;background:#dde7e1;display:flex;align-items:center;justify-content:center;font:600 12px system-ui;color:#5b6b61">赵</div><span style="flex:1;font:600 13px 'PingFang SC',sans-serif;color:#15201a">赵敏</span><span style="font:700 14px Barlow,system-ui;color:#9aa0a6">+22</span></div>
+      </div>
+    </div>
+    <div style="padding:14px 16px 18px;flex-shrink:0;background:#fff;border-top:1px solid #f0f3f1"><div style="height:48px;border-radius:14px;background:#16a34a;display:flex;align-items:center;justify-content:center;gap:8px;font:600 15px system-ui;color:#fff;box-shadow:0 6px 16px rgba(22,163,74,.3)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11 5.5a2 2 0 1 0-1.9-2.6L6.5 4.4M5 8a2 2 0 1 0 0 .1M11 11.5a2 2 0 1 0-1.9 1.4L6.5 11.6" stroke="#fff" stroke-width="1.3"/></svg>生成战报分享卡</div></div>
+  </div>
+  <div style="margin-top:12px;font:400 11px/1.6 system-ui;color:#9aa0a6">收尾。<b style="color:#16a34a">今日榜</b>随模式变（队制：胜场/胜率/净胜分；个人制：积分）+ MVP + 一键生成战报分享卡。</div>
+</div>
+
+<!-- ===== 9 · 个人战绩 ===== -->
+<div style="position:absolute;left:80px;top:1890px;width:320px">
+  <div data-drags-parent="1" style="position:absolute;top:-22px;font:600 11px system-ui;color:#8b9097">⑨ 个人战绩</div>
+  <div style="position:relative;width:320px;height:690px;background:#f5f8f4;border-radius:34px;box-shadow:0 10px 36px rgba(20,40,28,.14);overflow:hidden;display:flex;flex-direction:column">
+    <!-- green header -->
+    <div style="background:linear-gradient(150deg,#16a34a,#0b7a3b);padding:0 0 20px;position:relative;overflow:hidden">
+      <div style="position:absolute;right:-26px;top:-20px;width:120px;height:120px;border-radius:50%;background:rgba(215,242,107,.14)"></div>
+      <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font:600 12px Barlow,system-ui;color:rgba(255,255,255,.92)"><svg width="9" height="16" viewBox="0 0 9 16" fill="none"><path d="M8 1L1 8l7 7" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="width:16px;height:9px;border:1.2px solid rgba(255,255,255,.8);border-radius:2px"></span></div>
+      <div style="padding:10px 20px 0;display:flex;align-items:center;gap:14px"><div style="width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.22);border:2px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;font:700 22px 'PingFang SC',sans-serif;color:#fff">林</div><div><div style="font:700 20px 'PingFang SC',sans-serif;color:#fff">林丹丹</div><div style="margin-top:4px;padding:3px 10px;border-radius:8px;background:rgba(215,242,107,.22);font:600 10px system-ui;color:#eaffb0;width:fit-content;display:flex;align-items:center;gap:5px">中羽 L3 · 默认水平 <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#eaffb0" stroke-width="1"/><path d="M6 5.2v3M6 3.4v.1" stroke="#eaffb0" stroke-width="1.3" stroke-linecap="round"/></svg></div></div></div>
+    </div>
+    <div style="flex:1;margin-top:-10px;background:#f5f8f4;border-radius:18px 18px 0 0;padding:16px;display:flex;flex-direction:column;gap:13px;overflow:hidden">
+      <!-- stats -->
+      <div style="display:flex;gap:9px"><div style="flex:1;background:#fff;border-radius:14px;padding:13px 8px;text-align:center;box-shadow:0 1px 6px rgba(20,40,28,.04)"><div style="font:700 24px Barlow Semi Condensed,sans-serif;color:#15201a">42</div><div style="font:500 10px system-ui;color:#9aa0a6">参赛局</div></div><div style="flex:1;background:#fff;border-radius:14px;padding:13px 8px;text-align:center;box-shadow:0 1px 6px rgba(20,40,28,.04)"><div style="font:700 24px Barlow Semi Condensed,sans-serif;color:#16a34a">58%</div><div style="font:500 10px system-ui;color:#9aa0a6">胜率</div></div><div style="flex:1;background:#fff;border-radius:14px;padding:13px 8px;text-align:center;box-shadow:0 1px 6px rgba(20,40,28,.04)"><div style="font:700 24px Barlow Semi Condensed,sans-serif;color:#15201a">1280</div><div style="font:500 10px system-ui;color:#9aa0a6">积分</div></div></div>
+      <!-- partner / nemesis -->
+      <div style="display:flex;gap:9px"><div style="flex:1;background:#fff;border-radius:14px;padding:12px;box-shadow:0 1px 6px rgba(20,40,28,.04);display:flex;align-items:center;gap:9px"><div style="width:34px;height:34px;border-radius:50%;background:#cfe3d6;display:flex;align-items:center;justify-content:center;font:600 12px system-ui;color:#0b5e34">赵</div><div><div style="font:500 9px system-ui;color:#9aa0a6">最佳搭档</div><div style="font:600 13px 'PingFang SC',sans-serif;color:#15201a;margin-top:1px">赵敏</div></div></div><div style="flex:1;background:#fff;border-radius:14px;padding:12px;box-shadow:0 1px 6px rgba(20,40,28,.04);display:flex;align-items:center;gap:9px"><div style="width:34px;height:34px;border-radius:50%;background:#dde7e1;display:flex;align-items:center;justify-content:center;font:600 12px system-ui;color:#5b6b61">王</div><div><div style="font:500 9px system-ui;color:#9aa0a6">苦主</div><div style="font:600 13px 'PingFang SC',sans-serif;color:#15201a;margin-top:1px">王小明</div></div></div></div>
+      <!-- trend -->
+      <div style="flex:1;background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 6px rgba(20,40,28,.04);display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 12px 'PingFang SC',sans-serif;color:#15201a">积分趋势</span><span style="font:500 9px system-ui;color:#16a34a">近 7 局 ↗</span></div><div style="flex:1;display:flex;align-items:flex-end;gap:7px">
+        <div style="flex:1;height:38%;background:#e3ebe6;border-radius:5px 5px 0 0"></div><div style="flex:1;height:54%;background:#e3ebe6;border-radius:5px 5px 0 0"></div><div style="flex:1;height:46%;background:#e3ebe6;border-radius:5px 5px 0 0"></div><div style="flex:1;height:66%;background:#bfe0cd;border-radius:5px 5px 0 0"></div><div style="flex:1;height:58%;background:#e3ebe6;border-radius:5px 5px 0 0"></div><div style="flex:1;height:80%;background:#7cc79b;border-radius:5px 5px 0 0"></div><div style="flex:1;height:92%;background:#16a34a;border-radius:5px 5px 0 0"></div>
+      </div></div>
+    </div>
+    <div style="padding:14px 16px 18px;flex-shrink:0;background:#fff;border-top:1px solid #f0f3f1"><div style="height:46px;border-radius:14px;border:1.5px solid #16a34a;display:flex;align-items:center;justify-content:center;font:600 14px system-ui;color:#16a34a">分享我的战绩</div></div>
+  </div>
+  <div style="margin-top:12px;font:400 11px/1.6 system-ui;color:#9aa0a6">跨局按 openid 汇总：局数·胜率·积分·<b style="color:#16a34a">最佳搭档/苦主</b>·趋势图。自己可看，他人只读。</div>
+</div>
+
+<!-- ===== 10 · 选择水平 · 分级说明（底部弹层） ===== -->
+<div style="position:absolute;left:880px;top:1890px;width:320px">
+  <div data-drags-parent="1" style="position:absolute;top:-22px;font:600 11px system-ui;color:#16a34a">⑩ 选择水平 · 分级说明（点等级即弹出）</div>
+  <div style="position:relative;width:320px;height:690px;background:#3a443e;border-radius:34px;box-shadow:0 14px 40px rgba(20,40,28,.2);overflow:hidden;display:flex;flex-direction:column">
+    <!-- dimmed 签到 behind -->
+    <div style="position:absolute;inset:0;opacity:.28;filter:saturate(.7)">
+      <div style="height:34px;background:#fff"></div>
+      <div style="height:48px;background:#fff;border-bottom:1px solid #f0f3f1;display:flex;align-items:center;justify-content:center;font:600 16px 'PingFang SC',sans-serif;color:#15201a">签到 · 确定参赛</div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:10px"><div style="height:56px;background:#fff;border-radius:13px"></div><div style="height:56px;background:#fff;border-radius:13px"></div><div style="height:56px;background:#fff;border-radius:13px"></div></div>
+    </div>
+    <div style="position:absolute;inset:0;background:rgba(20,28,24,.45)"></div>
+    <!-- sheet -->
+    <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;padding:10px 18px 18px;display:flex;flex-direction:column;gap:11px">
+      <div style="width:38px;height:4px;border-radius:2px;background:#e3e8e5;align-self:center"></div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between">
+        <div><div style="font:700 17px 'PingFang SC',sans-serif;color:#15201a">王小明的本场水平</div><div style="font:400 11px system-ui;color:#9aa0a6;margin-top:2px">中羽业余分级 · 不确定就选最近水平，局长可微调</div></div>
+        <div style="width:28px;height:28px;border-radius:50%;background:#f0f3f1;display:flex;align-items:center;justify-content:center;font:500 13px system-ui;color:#80878f">✕</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <div style="display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:12px;border:1.5px solid #f0f3f1"><div style="width:36px;height:36px;border-radius:10px;background:#f0f3f1;display:flex;align-items:center;justify-content:center;font:700 13px Barlow,system-ui;color:#80878f">L1</div><div style="flex:1"><div style="font:600 13px 'PingFang SC',sans-serif;color:#15201a">新手</div><div style="font:400 10px/1.3 system-ui;color:#9aa0a6">刚接触，发球/接发球不稳</div></div><div style="width:19px;height:19px;border-radius:50%;border:1.5px solid #d3dad6"></div></div>
+        <div style="display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:12px;border:1.5px solid #f0f3f1"><div style="width:36px;height:36px;border-radius:10px;background:#e6f4ec;display:flex;align-items:center;justify-content:center;font:700 13px Barlow,system-ui;color:#16a34a">L2</div><div style="flex:1"><div style="font:600 13px 'PingFang SC',sans-serif;color:#15201a">入门</div><div style="font:400 10px/1.3 system-ui;color:#9aa0a6">能连续对拉多拍，规则熟悉</div></div><div style="width:19px;height:19px;border-radius:50%;border:1.5px solid #d3dad6"></div></div>
+        <div style="display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:12px;border:1.5px solid #16a34a;background:#f3faf5;box-shadow:0 2px 10px rgba(22,163,74,.1)"><div style="width:36px;height:36px;border-radius:10px;background:#cfe8d8;display:flex;align-items:center;justify-content:center;font:700 13px Barlow,system-ui;color:#0b7a3b">L3</div><div style="flex:1"><div style="font:600 13px 'PingFang SC',sans-serif;color:#15201a">初阶 <span style="font:500 9px system-ui;color:#16a34a;background:#e6f4ec;padding:1px 6px;border-radius:5px;margin-left:3px">默认</span></div><div style="font:400 10px/1.3 system-ui;color:#5b6b61">会高远球/吊球，有基本步法</div></div><div style="width:19px;height:19px;border-radius:50%;background:#16a34a;display:flex;align-items:center;justify-content:center"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.2 2.2L9.5 3.6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+        <div style="display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:12px;border:1.5px solid #f0f3f1"><div style="width:36px;height:36px;border-radius:10px;background:#16a34a;display:flex;align-items:center;justify-content:center;font:700 13px Barlow,system-ui;color:#fff">L4</div><div style="flex:1"><div style="font:600 13px 'PingFang SC',sans-serif;color:#15201a">进阶</div><div style="font:400 10px/1.3 system-ui;color:#9aa0a6">杀球有质量，能控落点、懂战术</div></div><div style="width:19px;height:19px;border-radius:50%;border:1.5px solid #d3dad6"></div></div>
+        <div style="display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:12px;border:1.5px solid #f0f3f1"><div style="width:36px;height:36px;border-radius:10px;background:#0b7a3b;display:flex;align-items:center;justify-content:center;font:700 13px Barlow,system-ui;color:#fff">L5</div><div style="flex:1"><div style="font:600 13px 'PingFang SC',sans-serif;color:#15201a">高阶</div><div style="font:400 10px/1.3 system-ui;color:#9aa0a6">攻防转换快，多拍相持强</div></div><div style="width:19px;height:19px;border-radius:50%;border:1.5px solid #d3dad6"></div></div>
+        <div style="display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:12px;border:1.5px solid #f0f3f1"><div style="width:36px;height:36px;border-radius:10px;background:#0b5e34;display:flex;align-items:center;justify-content:center;font:700 13px Barlow,system-ui;color:#d7f26b">L6</div><div style="flex:1"><div style="font:600 13px 'PingFang SC',sans-serif;color:#15201a">高手</div><div style="font:400 10px/1.3 system-ui;color:#9aa0a6">球队主力 / 接近专业水平</div></div><div style="width:19px;height:19px;border-radius:50%;border:1.5px solid #d3dad6"></div></div>
+      </div>
+      <div style="height:48px;border-radius:14px;background:#16a34a;display:flex;align-items:center;justify-content:center;font:600 15px system-ui;color:#fff;box-shadow:0 6px 16px rgba(22,163,74,.3);margin-top:2px">确定 · 中羽 L3</div>
+    </div>
+  </div>
+  <div style="margin-top:12px;font:400 11px/1.6 system-ui;color:#9aa0a6"><b style="color:#16a34a">说明即选项</b>：点任意水平 badge 都弹出此层，6 级各带一句话描述——用户选水平时必然读到，不必再翻设置。战绩/资料的等级标签挂 ⓘ 也直达这里。</div>
+</div>
+</x-dc>
+</body>
+</html>

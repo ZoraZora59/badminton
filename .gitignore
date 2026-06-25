@@ -1,0 +1,44 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+build/
+frontend/dist/
+backend/dist/
+
+# prisma generated client
+backend/src/generated/
+backend/prisma/generated/
+
+# real (non-template) config — secrets live here, never commit
+backend/config/config.local.yml
+backend/config/config.prod.yml
+backend/config/config.yml
+
+# uploads (user avatars) — runtime artifacts, served statically
+backend/uploads/
+
+# logs
+*.log
+logs/
+npm-debug.log*
+
+# env
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# taro
+frontend/.temp/
+frontend/.swc/
+
+# wechat miniprogram upload private key (secret)
+*.key
+frontend/ci/private.*.key

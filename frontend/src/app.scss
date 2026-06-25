@@ -1,0 +1,29 @@
+@import './styles/tokens.scss';
+
+page {
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  color: var(--c-text);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+view,
+text,
+button,
+input,
+textarea,
+scroll-view {
+  box-sizing: border-box;
+}
+
+/* 去掉小程序 button 默认边框/底色，统一由业务样式接管 */
+button {
+  padding: 0;
+  margin: 0;
+  font-size: inherit;
+  line-height: normal;
+  background: transparent;
+  &::after {
+    border: none;
+  }
+}

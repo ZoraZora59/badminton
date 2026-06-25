@@ -1,0 +1,29 @@
+.bm-btn {
+  height: 48px;
+  border-radius: var(--radius-btn);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 600;
+
+  &--block {
+    width: 100%;
+  }
+  &--solid {
+    background: var(--c-primary);
+    color: #fff;
+    box-shadow: var(--shadow-btn);
+  }
+  &--outline {
+    background: transparent;
+    color: var(--c-primary);
+    border: 1.5px solid var(--c-primary);
+  }
+  &--disabled {
+    opacity: 0.5;
+  }
+  &:active {
+    opacity: 0.88;
+  }
+}

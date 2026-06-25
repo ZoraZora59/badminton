@@ -1,0 +1,36 @@
+{
+  "name": "@badminton/backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/server.ts --env=local",
+    "start": "node dist/server.js --env=prod",
+    "build": "tsc -p tsconfig.json",
+    "prisma": "node scripts/prisma.mjs",
+    "db:generate": "prisma generate",
+    "db:push": "node scripts/prisma.mjs db push",
+    "db:migrate": "node scripts/prisma.mjs migrate dev",
+    "db:seed": "tsx prisma/seed.ts --env=local",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "fix:aa": "tsx scripts/fix-prod-aa.ts"
+  },
+  "dependencies": {
+    "@badminton/shared": "workspace:*",
+    "@fastify/cors": "^10.0.1",
+    "@prisma/client": "^6.1.0",
+    "fastify": "^5.1.0",
+    "fastify-plugin": "^5.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "yaml": "^2.6.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.9.0",
+    "prisma": "^6.1.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
+  }
+}
