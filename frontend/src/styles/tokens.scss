@@ -31,10 +31,18 @@ page {
   --grad-header: linear-gradient(150deg, #16a34a, #0b7a3b);
   --grad-mvp: linear-gradient(135deg, #0b5e34, #16a34a);
 
-  /* 底部常驻 tab 栏高度（不含安全区，含图标+文字两行）；由 PageFrame 作为 flex 子元素占位 */
+  /* 底部 tab 栏行高（不含安全区，含图标+文字两行）；PageFrame 内联 BottomTab 与自定义 tabBar 同源 */
   --tabbar-h: 56px;
-  /* 悬浮按钮（FAB）底部与页面 webview 底（≈tabBar 顶）的净间距，留出阴影呼吸空间 */
-  --fab-gap: 36px;
+  /* 固定自定义 tabBar 实际吃掉的「底区」带高 = 行高 + 行内补白/描边(≈6px) + 安全区。
+     三个 tab 页的中区滚动留白、贴底操作区、FAB 抬升都引用它——底栏高度全站只此一处，杜绝各页重复抄数。 */
+  --tabbar-band: calc(var(--tabbar-h, 56px) + 6px + env(safe-area-inset-bottom));
+  /* FAB 浮在底区之上的呼吸间距（从底区顶沿算起，不再误从 webview 底算）。 */
+  --fab-gap: 14px;
+
+  /* 层级阶梯（z-index 唯一真源）：底栏 < FAB < 全屏浮层。元素只声明所属层，不再各填裸数字。 */
+  --z-tabbar: 100;
+  --z-fab: 101;
+  --z-overlay: 1000;
 
   /* 圆角 / 阴影 */
   --radius-card: 16px;

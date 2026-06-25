@@ -65,7 +65,8 @@
     padding: 20px 16px 16px;
   }
   &__pad {
-    height: 24px;
+    /* 中区滚动尾留白：清开固定底栏带（含安全区），最后一行提示/卡片不被遮 */
+    height: var(--tabbar-band);
   }
 
   /* 资料卡 */

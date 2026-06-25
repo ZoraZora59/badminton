@@ -1,7 +1,8 @@
 .bm-sheet {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  /* 全屏弹层属 overlay 层，必须盖住底栏；之前是 100，与底栏并列 → 被底栏遮住确认键 */
+  z-index: var(--z-overlay, 1000);
 
   &__mask {
     position: absolute;

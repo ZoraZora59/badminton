@@ -101,6 +101,11 @@
   }
   &__pad {
     height: 24px;
+
+    /* 无分享底栏（看他人/空态）时，中区直铺到视口底，需自行清开固定底栏带 */
+    &--bare {
+      height: var(--tabbar-band);
+    }
   }
 
   /* 统计三宫格 */
@@ -222,8 +227,8 @@
   /* ===== 分享底栏 ===== */
   &__footer {
     flex-shrink: 0;
-    /* 底部常驻 tab 为 fixed，需为分享按钮预留底栏高度，避免被遮挡 */
-    padding: 14px 16px calc(18px + var(--tabbar-h, 56px) + env(safe-area-inset-bottom));
+    /* 底部常驻 tab 为 fixed，分享按钮需清开底栏带（band 已含安全区） */
+    padding: 14px 16px calc(18px + var(--tabbar-band));
     background: var(--c-card);
     border-top: 1px solid var(--c-border-2);
   }

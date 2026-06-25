@@ -156,7 +156,7 @@ export default function Profile() {
             </View>
           </>
         )}
-        <View className="profile__pad" />
+        <View className={`profile__pad${!isOther && stats ? '' : ' profile__pad--bare'}`} />
         </View>
       </ScrollView>
 

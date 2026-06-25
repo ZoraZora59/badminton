@@ -93,13 +93,16 @@
     min-height: 0;
   }
   &__list-pad {
-    height: 104px;
+    /* 中区滚动尾留白：清开底栏带 + FAB，最后一张卡可完整滚到底栏之上 */
+    height: calc(var(--tabbar-band) + 48px);
   }
 
   &__fab {
     position: fixed;
     right: 18px;
-    bottom: calc(var(--fab-gap, 28px) + env(safe-area-inset-bottom));
+    /* 锚在底区之上：底栏带高 + 呼吸间距（band 已含安全区）；层级在底栏之上、全屏弹层之下 */
+    bottom: calc(var(--tabbar-band) + var(--fab-gap));
+    z-index: var(--z-fab, 101);
     width: 52px;
     height: 52px;
     border-radius: 50%;
