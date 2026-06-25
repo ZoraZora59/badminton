@@ -222,32 +222,54 @@ export default function Activity() {
   );
 }
 
-/** 三类名单区块：头像 + 昵称 + 人数，多于 8 人折叠为 +N；带人显示「+N」 */
+/**
+ * 三类名单区块：头像 + 昵称 + 人数，多于 8 人折叠为 +N。
+ * 「+1 带人」在已报名/候补里按真实身位画虚位影位（与卡片「已报名 N」的身位口径一致）；
+ * 请假不带 +1 入场，故只数本人。
+ */
 function WallSection(props: { title: string; tone: 'success' | 'warn' | 'muted'; items: SignupVM[]; hostId: number }) {
   const { title, tone, items, hostId } = props;
   if (items.length === 0) return null;
+  const countGhost = tone !== 'muted'; // 请假名单不把 +1 计入场上身位
+  type Cell =
+    | { key: string; ghost: false; s: SignupVM; host: boolean }
+    | { key: string; ghost: true; bringer: string };
+  const cells: Cell[] = [];
+  for (const s of items) {
+    cells.push({ key: `s-${s.id}`, ghost: false, s, host: s.user.id === hostId });
+    if (countGhost) {
+      for (let i = 0; i < s.plusOne; i++) {
+        cells.push({ key: `s-${s.id}-g${i}`, ghost: true, bringer: s.user.nickname });
+      }
+    }
+  }
   const MAX = 8;
-  const shown = items.slice(0, MAX);
-  const overflow = items.length - shown.length;
+  const shown = cells.slice(0, MAX);
+  const overflow = cells.length - shown.length;
   return (
     <View className="wall-sec">
       <View className="wall-sec__head">
         <Tag text={title} tone={tone} />
-        <Text className="wall-sec__count num">{items.length} 人</Text>
+        <Text className="wall-sec__count num">{cells.length} 人</Text>
       </View>
       <View className="wall-sec__grid">
-        {shown.map((s) => {
-          const host = s.user.id === hostId;
-          return (
-            <View key={s.id} className="wall-sec__item">
+        {shown.map((c) =>
+          c.ghost ? (
+            <View key={c.key} className="wall-sec__item">
               <View className="wall-sec__av">
-                <Avatar name={s.user.nickname} src={s.user.avatarUrl} size={40} ring={host} />
-                {s.plusOne > 0 ? <Text className="wall-sec__plus num">+{s.plusOne}</Text> : null}
+                <View className="wall-sec__ghost">＋</View>
               </View>
-              <Text className="wall-sec__name">{host ? `${s.user.nickname}·局长` : s.user.nickname}</Text>
+              <Text className="wall-sec__name wall-sec__name--ghost">{c.bringer}带</Text>
             </View>
-          );
-        })}
+          ) : (
+            <View key={c.key} className="wall-sec__item">
+              <View className="wall-sec__av">
+                <Avatar name={c.s.user.nickname} src={c.s.user.avatarUrl} size={40} ring={c.host} />
+              </View>
+              <Text className="wall-sec__name">{c.host ? `${c.s.user.nickname}·局长` : c.s.user.nickname}</Text>
+            </View>
+          ),
+        )}
         {overflow > 0 ? (
           <View className="wall-sec__item">
             <View className="wall-sec__more">+{overflow}</View>

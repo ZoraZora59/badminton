@@ -4,7 +4,16 @@ import { Gender, SkillLevel } from '@badminton/shared';
 import { ok } from '../../lib/response';
 import { currentUserId } from '../../plugins/auth';
 import { Errors } from '../../lib/errors';
-import { addGuest, batchCheckin, getCheckinList, listParticipants, promoteWaitlist, selfCheckin } from './service';
+import {
+  addGuest,
+  batchCheckin,
+  getCheckinList,
+  listParticipants,
+  promoteWaitlist,
+  removeGuest,
+  selfCheckin,
+  updateGuest,
+} from './service';
 
 const IdParam = z.object({ id: z.coerce.number().int().positive() });
 const CheckinBody = z.object({
@@ -20,6 +29,15 @@ const GuestBody = z.object({
   guestName: z.string().min(1).max(20),
   level: z.nativeEnum(SkillLevel).optional(),
   gender: z.nativeEnum(Gender).optional(),
+});
+const UpdateGuestBody = z.object({
+  displayName: z.string().min(1).max(20).optional(),
+  level: z.nativeEnum(SkillLevel).optional(),
+  gender: z.nativeEnum(Gender).optional(),
+});
+const ParticipantParam = z.object({
+  id: z.coerce.number().int().positive(),
+  pid: z.coerce.number().int().positive(),
 });
 
 async function assertHost(app: FastifyInstance, activityId: number, userId: number) {
@@ -55,6 +73,22 @@ export default async function checkinRoutes(app: FastifyInstance) {
     await assertHost(app, id, uid);
     const body = GuestBody.parse(req.body);
     return ok(await addGuest(app.prisma, id, body));
+  });
+
+  app.patch('/activities/:id/participants/:pid', { preHandler: app.authenticate }, async (req) => {
+    const uid = currentUserId(req);
+    const { id, pid } = ParticipantParam.parse(req.params);
+    await assertHost(app, id, uid);
+    const body = UpdateGuestBody.parse(req.body);
+    return ok(await updateGuest(app.prisma, id, pid, body));
+  });
+
+  app.delete('/activities/:id/participants/:pid', { preHandler: app.authenticate }, async (req) => {
+    const uid = currentUserId(req);
+    const { id, pid } = ParticipantParam.parse(req.params);
+    await assertHost(app, id, uid);
+    await removeGuest(app.prisma, id, pid);
+    return ok({ ok: true });
   });
 
   app.get('/activities/:id/participants', { preHandler: app.authenticate }, async (req) => {

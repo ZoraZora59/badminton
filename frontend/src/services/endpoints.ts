@@ -15,6 +15,7 @@ import type {
   SignupVM,
   SummaryVM,
   UpdateActivityReq,
+  UpdateGuestReq,
   UpdateProfileReq,
   UserStatsVM,
   UserVM,
@@ -52,6 +53,9 @@ export const api = {
   batchCheckin: (id: number, body: CheckinReq) => http.post<CheckinListVM>(`/activities/${id}/checkin`, body),
   selfCheckin: (id: number, checkedIn = true) => http.post<SignupVM>(`/activities/${id}/checkin/me`, { checkedIn }),
   addGuest: (id: number, body: AddGuestReq) => http.post<ParticipantVM>(`/activities/${id}/participants`, body),
+  updateGuest: (id: number, pid: number, body: UpdateGuestReq) =>
+    http.patch<ParticipantVM>(`/activities/${id}/participants/${pid}`, body),
+  removeGuest: (id: number, pid: number) => http.del<{ ok: boolean }>(`/activities/${id}/participants/${pid}`),
   listParticipants: (id: number) => http.get<ParticipantVM[]>(`/activities/${id}/participants`),
   promote: (id: number, signupId: number) => http.post<SignupVM[]>(`/activities/${id}/signups/${signupId}/promote`),
 

@@ -12,5 +12,6 @@ export function toParticipantVM(p: Participant & { user?: User | null }): Partic
     avatarUrl: p.user?.avatarUrl ?? null,
     level: p.level as SkillLevel,
     gender: p.gender as Gender,
+    broughtBySignupId: p.broughtBySignupId ?? null,
   };
 }

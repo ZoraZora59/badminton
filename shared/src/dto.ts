@@ -141,11 +141,20 @@ export interface ParticipantVM {
   avatarUrl: string | null;
   level: SkillLevel;
   gender: Gender;
+  /** 该 Guest 由某条报名的「+1 带人」物化而来；null = 局长现场加的散客 */
+  broughtBySignupId: number | null;
 }
 
 /** POST /activities/:id/participants —— 加临时球友 */
 export interface AddGuestReq {
   guestName: string;
+  level?: SkillLevel;
+  gender?: Gender;
+}
+
+/** PATCH /activities/:id/participants/:pid —— 编辑临时球友（含 +1 带人占位）的昵称/水平/性别 */
+export interface UpdateGuestReq {
+  displayName?: string;
   level?: SkillLevel;
   gender?: Gender;
 }

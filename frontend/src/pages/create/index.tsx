@@ -6,7 +6,7 @@ import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
 import { toastError } from '../../services/api';
 import { Empty, PageFrame } from '../../components';
-import { fmtCardTime, cleanRemark } from '../../utils/format';
+import { fmtMonthDay, fmtWeekday, cleanRemark } from '../../utils/format';
 import './index.scss';
 
 /** 本地“日期 + 时间” → 后端 UTC ISO。页面挂钟时间按 Asia/Shanghai(+8) 处理。 */
@@ -103,9 +103,11 @@ export default function Create() {
   const endIso = toIso(endDate, endTime);
   const ddlIso = toIso(ddlDate, ddlTime);
 
-  const startLabel = fmtCardTime(startIso); // 周六 19:00
-  const endLabel = fmtCardTime(endIso);
-  const ddlLabel = fmtCardTime(ddlIso);
+  // 日期格只显示「月日 + 星期」（6月28日 周六），时间交给右侧时间选择器，避免同一时间展示两遍
+  const dateLabel = (iso: string) => `${fmtMonthDay(iso)} ${fmtWeekday(iso)}`;
+  const startLabel = dateLabel(startIso);
+  const endLabel = dateLabel(endIso);
+  const ddlLabel = dateLabel(ddlIso);
 
   const step = (v: number, delta: number, min: number, max: number) =>
     Math.min(max, Math.max(min, v + delta));

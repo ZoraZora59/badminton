@@ -35,6 +35,8 @@ export default function Checkin() {
 
   // 选水平弹层：正在编辑的 signupId（null = 关闭）
   const [sheetFor, setSheetFor] = useState<number | null>(null);
+  // 临时球友（含 +1 带人占位）的本场水平弹层
+  const [guestSheet, setGuestSheet] = useState<ParticipantVM | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -122,6 +124,64 @@ export default function Checkin() {
     }
   };
 
+  // 改临时球友昵称（+1 占位默认叫「XX的朋友」，局长现场补真名）
+  const renameGuest = async (g: ParticipantVM) => {
+    try {
+      const res = (await Taro.showModal({
+        title: '修改球友昵称',
+        editable: true,
+        placeholderText: '球友昵称',
+        content: g.displayName,
+        confirmText: '保存',
+        cancelText: '取消',
+      } as Taro.showModal.Option)) as { confirm: boolean; content?: string };
+      if (!res.confirm) return;
+      const name = (res.content || '').trim();
+      if (!name) {
+        Taro.showToast({ title: '请输入球友昵称', icon: 'none' });
+        return;
+      }
+      const updated = await api.updateGuest(id, g.id, { displayName: name });
+      setGuests((list) => list.map((x) => (x.id === g.id ? updated : x)));
+    } catch (e) {
+      toastError(e);
+    }
+  };
+
+  const setGuestLevel = async (level: SkillLevel) => {
+    const g = guestSheet;
+    setGuestSheet(null);
+    if (!g) return;
+    try {
+      const updated = await api.updateGuest(id, g.id, { level });
+      setGuests((list) => list.map((x) => (x.id === g.id ? updated : x)));
+    } catch (e) {
+      toastError(e);
+    }
+  };
+
+  // 移除临时球友；+1 占位移除会让带人者 plusOne 减 1（本地同步，避免重拉重置签到草稿）
+  const removeGuestRow = async (g: ParticipantVM) => {
+    try {
+      const res = await Taro.showModal({
+        title: '移除球友',
+        content: `确定移除「${g.displayName}」？`,
+        confirmText: '移除',
+        cancelText: '取消',
+      });
+      if (!res.confirm) return;
+      await api.removeGuest(id, g.id);
+      setGuests((list) => list.filter((x) => x.id !== g.id));
+      if (g.broughtBySignupId != null) {
+        setSignups((list) =>
+          list.map((s) => (s.id === g.broughtBySignupId ? { ...s, plusOne: Math.max(0, s.plusOne - 1) } : s)),
+        );
+      }
+    } catch (e) {
+      toastError(e);
+    }
+  };
+
   const promote = async (signupId: number) => {
     try {
       const updated = await api.promote(id, signupId);
@@ -195,19 +255,26 @@ export default function Checkin() {
     );
   };
 
-  const renderGuest = (g: ParticipantVM) => (
+  const renderGuest = (g: ParticipantVM, bringerName?: string) => (
     <View key={`g-${g.id}`} className="ck-row">
       <View className="ck-row__box ck-row__box--on">
         <Text className="ck-row__tick">✓</Text>
       </View>
       <Avatar name={g.displayName} src={g.avatarUrl} size={34} />
-      <View className="ck-row__info">
+      <View className="ck-row__info" onClick={() => renameGuest(g)}>
         <View className="ck-row__nameline">
           <Text className="ck-row__name">{g.displayName}</Text>
-          <Tag text="临时" tone="accent" />
+          <Tag text={bringerName ? '带' : '临时'} tone="accent" />
+          <Text className="ck-row__edit">✎</Text>
         </View>
+        <Text className="ck-row__sub">{bringerName ? `${bringerName} 带 · 点击改名` : '点击改名'}</Text>
       </View>
-      <View className="ck-row__lv ck-row__lv--static">{levelLabel(g.level)}</View>
+      <View className="ck-row__lv" onClick={() => setGuestSheet(g)}>
+        {levelLabel(g.level)} <Text className="ck-row__caret">▾</Text>
+      </View>
+      <View className="ck-row__del" onClick={() => removeGuestRow(g)}>
+        ✕
+      </View>
     </View>
   );
 
@@ -223,13 +290,22 @@ export default function Checkin() {
     </View>
   );
   const overlayNode = (
-    <LevelSheetLazy
-      visible={sheetFor != null}
-      value={sheetSignup ? draft[sheetSignup.id]?.level ?? DEFAULT_LEVEL : DEFAULT_LEVEL}
-      signup={sheetSignup}
-      onConfirm={setLevel}
-      onClose={() => setSheetFor(null)}
-    />
+    <>
+      <LevelSheetLazy
+        visible={sheetFor != null}
+        value={sheetSignup ? draft[sheetSignup.id]?.level ?? DEFAULT_LEVEL : DEFAULT_LEVEL}
+        signup={sheetSignup}
+        onConfirm={setLevel}
+        onClose={() => setSheetFor(null)}
+      />
+      <LevelSheet
+        visible={guestSheet != null}
+        value={guestSheet?.level ?? DEFAULT_LEVEL}
+        title={guestSheet ? `${guestSheet.displayName} · 本场水平` : '本场水平'}
+        onConfirm={setGuestLevel}
+        onClose={() => setGuestSheet(null)}
+      />
+    </>
   );
 
   if (!loaded) {
@@ -265,8 +341,13 @@ export default function Checkin() {
           <Empty text="还没有报名的球友" hint="先回活动详情邀请好友报名" />
         ) : (
           <>
-            {roster.map(renderSignup)}
-            {guests.map(renderGuest)}
+            {roster.flatMap((s) => [
+              renderSignup(s),
+              ...guests
+                .filter((g) => g.broughtBySignupId === s.id)
+                .map((g) => renderGuest(g, s.user.nickname)),
+            ])}
+            {guests.filter((g) => g.broughtBySignupId == null).map((g) => renderGuest(g))}
             {signups.filter((s) => s.status === SignupStatus.LEAVE).map(renderSignup)}
 
             <View className="ck-add" onClick={addGuest}>

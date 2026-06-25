@@ -318,3 +318,74 @@ describe('R1 无 body 写接口：空 JSON 体兜底', () => {
     expect(body.data.status).toBe(ActivityStatus.CANCELLED);
   });
 });
+
+describe('E3+「+1 带人」物化为可改名 / 可移除的参赛者', () => {
+  it('报名带 +1 → 签到页自动显形（幂等）→ 改名/设水平 → 移除并回收 plusOne', async () => {
+    const host = await login(`t${RUN}_plus_host`);
+    const bringer = await login(`t${RUN}_plus_bringer`);
+
+    const created = await api('POST', '/api/activities', {
+      token: host.token,
+      body: {
+        title: '+1 物化测试',
+        startAt: new Date('2026-07-06T19:00:00+08:00').toISOString(),
+        venue: '测试馆',
+        courtCount: 2,
+        capacity: 8,
+        playType: PlayType.DOUBLES,
+        defaultMode: GroupMode.BALANCED,
+      },
+    });
+    expect(created.body.code).toBe(0);
+    const aid = created.body.data.id;
+
+    // bringer 报名并带 1 人
+    const su = await api('POST', `/api/activities/${aid}/signups`, { token: bringer.token, body: { plusOne: 1 } });
+    expect(su.body.data.plusOne).toBe(1);
+
+    // 活动详情身位口径含 +1：host(1) + bringer(1+1) = 3
+    const act = await api('GET', `/api/activities/${aid}`, { token: host.token });
+    expect(act.body.data.signedUpCount).toBe(3);
+
+    // 打开签到 → +1 自动物化为归属 bringer 的 Guest
+    let checkin = (await api('GET', `/api/activities/${aid}/checkin`, { token: host.token })).body.data;
+    const bringerSignup = checkin.signups.find((s: any) => s.user.id === bringer.userId);
+    const plusGuests = checkin.guests.filter((g: any) => g.broughtBySignupId === bringerSignup.id);
+    expect(plusGuests.length).toBe(1);
+    const guestId = plusGuests[0].id;
+    expect(plusGuests[0].isGuest).toBe(true);
+    expect(plusGuests[0].displayName).toContain('的朋友');
+
+    // 幂等：再次打开签到不重复建
+    checkin = (await api('GET', `/api/activities/${aid}/checkin`, { token: host.token })).body.data;
+    expect(checkin.guests.filter((g: any) => g.broughtBySignupId === bringerSignup.id).length).toBe(1);
+
+    // 局长改名 + 设本场水平
+    const renamed = await api('PATCH', `/api/activities/${aid}/participants/${guestId}`, {
+      token: host.token,
+      body: { displayName: '老王', level: SkillLevel.L3 },
+    });
+    expect(renamed.body.data.displayName).toBe('老王');
+    expect(renamed.body.data.level).toBe(SkillLevel.L3);
+
+    // 改过的名字不被 reconcile 回灌
+    checkin = (await api('GET', `/api/activities/${aid}/checkin`, { token: host.token })).body.data;
+    expect(checkin.guests.find((g: any) => g.id === guestId).displayName).toBe('老王');
+
+    // 非局长不能改 / 删
+    const forbid = await api('PATCH', `/api/activities/${aid}/participants/${guestId}`, {
+      token: bringer.token,
+      body: { displayName: 'x' },
+    });
+    expect(forbid.status).toBe(403);
+
+    // 移除 +1 → 带人者 plusOne 减 1、占位不再复活
+    const del = await api('DELETE', `/api/activities/${aid}/participants/${guestId}`, { token: host.token });
+    expect(del.body.code).toBe(0);
+    const after = (await api('GET', `/api/activities/${aid}/checkin`, { token: host.token })).body.data;
+    expect(after.guests.find((g: any) => g.id === guestId)).toBeUndefined();
+    expect(after.signups.find((s: any) => s.user.id === bringer.userId).plusOne).toBe(0);
+
+    await app.prisma.activity.deleteMany({ where: { id: aid } });
+  });
+});

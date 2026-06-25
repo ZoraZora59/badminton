@@ -154,6 +154,9 @@ model Participant {
   level      SkillLevel @default(L2)
   gender     Gender     @default(UNKNOWN)
   isGuest    Boolean    @default(false)
+  // 该 Guest 由某条报名的「+1 带人」物化而来；NULL = 局长现场加的散客。
+  // 用它在签到页把 +1 占位行归到带人者名下，并保证按 plusOne 幂等物化（不重复建、不漏建）。
+  broughtBySignupId Int?
   createdAt  DateTime   @default(now())
 
   matchPlayers MatchPlayer[]
@@ -161,6 +164,7 @@ model Participant {
   @@unique([activityId, userId]) // 真人参赛者按(活动,用户)唯一；Guest 的 userId=NULL，MySQL 允许多个 NULL
   @@index([activityId])
   @@index([userId])
+  @@index([broughtBySignupId])
 }
 
 // ============ 轮次 / 对局 ============
