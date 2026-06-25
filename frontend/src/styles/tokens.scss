@@ -33,6 +33,8 @@ page {
 
   /* 底部常驻 tab 栏高度（不含安全区，含图标+文字两行）；由 PageFrame 作为 flex 子元素占位 */
   --tabbar-h: 56px;
+  /* 悬浮按钮（FAB）底部与页面 webview 底（≈tabBar 顶）的净间距，留出阴影呼吸空间 */
+  --fab-gap: 36px;
 
   /* 圆角 / 阴影 */
   --radius-card: 16px;

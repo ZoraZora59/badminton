@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text } from '@tarojs/components';
-import { LEVELS, SkillLevel, levelLabel } from '@badminton/shared';
+import { LEVELS, SkillLevel, DEFAULT_LEVEL, levelLabel } from '@badminton/shared';
 import './index.scss';
 
 interface Props {
@@ -12,7 +12,7 @@ interface Props {
 }
 
 /** 选择水平 · 分级说明（设计稿⑩）：6 级各带一句话，说明即选项 */
-export default function LevelSheet({ visible, value = SkillLevel.L3, title = '选择本场水平', onConfirm, onClose }: Props) {
+export default function LevelSheet({ visible, value = DEFAULT_LEVEL, title = '选择本场水平', onConfirm, onClose }: Props) {
   const [sel, setSel] = useState<SkillLevel>(value);
   useEffect(() => {
     if (visible) setSel(value);

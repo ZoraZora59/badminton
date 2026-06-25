@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { View, Text, Input, Button, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
-import { Gender, SkillLevel, levelLabel, type UserVM } from '@badminton/shared';
+import { Gender, SkillLevel, DEFAULT_LEVEL, levelLabel, type UserVM } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
 import { useUser, setUser } from '../../store/user';
@@ -20,7 +20,7 @@ export default function Me() {
   const [nickname, setNickname] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [gender, setGender] = useState<Gender>(Gender.UNKNOWN);
-  const [level, setLevel] = useState<SkillLevel>(SkillLevel.L3);
+  const [level, setLevel] = useState<SkillLevel>(DEFAULT_LEVEL);
   const [sheet, setSheet] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -29,7 +29,7 @@ export default function Me() {
     setNickname(u.nickname || '');
     setAvatarUrl(u.avatarUrl || '');
     setGender(u.gender || Gender.UNKNOWN);
-    setLevel(u.defaultLevel || SkillLevel.L3);
+    setLevel(u.defaultLevel || DEFAULT_LEVEL);
   }, []);
 
   const load = useCallback(async () => {
@@ -123,7 +123,7 @@ export default function Me() {
           <View className="me__hero-info">
             <Text className="me__hero-name">{headName}</Text>
             <View className="me__hero-badge">
-              <Text className="me__hero-badge-txt">{levelLabel(level)} · 默认水平</Text>
+              <Text className="me__hero-badge-txt">{levelLabel(level)}</Text>
             </View>
           </View>
         </View>
@@ -133,8 +133,6 @@ export default function Me() {
         <View className="me__inner">
         {/* 资料卡 */}
         <View className="card me__card">
-          <Text className="me__card-title">个人资料</Text>
-
           {/* 头像（微信 chooseAvatar） */}
           <View className="row row--avatar">
             <Text className="row__label">头像</Text>
@@ -181,7 +179,7 @@ export default function Me() {
 
           {/* 默认水平 → LevelSheet */}
           <View className="field me__field">
-            <Text className="field__label">默认水平</Text>
+            <Text className="field__label">水平</Text>
             <View className="me__level" onClick={() => setSheet(true)}>
               <View className="me__level-left">
                 <View className="me__level-badge num">{level}</View>
@@ -228,7 +226,7 @@ export default function Me() {
       <LevelSheet
         visible={sheet}
         value={level}
-        title="选择默认水平"
+        title="选择水平"
         onConfirm={(lv) => {
           setLevel(lv);
           setSheet(false);

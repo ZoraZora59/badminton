@@ -16,7 +16,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    padding-top: 10px;
+    padding-top: 24px;
   }
   &__hi {
     font-size: 12px;
@@ -93,13 +93,13 @@
     min-height: 0;
   }
   &__list-pad {
-    height: 90px;
+    height: 104px;
   }
 
   &__fab {
     position: fixed;
     right: 18px;
-    bottom: calc(20px + env(safe-area-inset-bottom));
+    bottom: calc(var(--fab-gap, 28px) + env(safe-area-inset-bottom));
     width: 52px;
     height: 52px;
     border-radius: 50%;

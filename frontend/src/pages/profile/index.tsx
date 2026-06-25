@@ -66,7 +66,7 @@ export default function Profile() {
             <Text className="profile__name">{user?.nickname ?? '—'}</Text>
             {user ? (
               <View className="profile__level">
-                <Text className="profile__level-txt">{levelLabel(user.defaultLevel)} · 默认水平</Text>
+                <Text className="profile__level-txt">{levelLabel(user.defaultLevel)}</Text>
               </View>
             ) : null}
           </View>

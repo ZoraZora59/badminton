@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import type { LoginResp } from '@badminton/shared';
+import { DEFAULT_LEVEL } from '@badminton/shared';
 import type { AppConfig } from '../../config';
 import { code2session } from '../../lib/wechat';
 import { signToken } from '../../lib/jwt';
@@ -40,6 +41,7 @@ export async function login(
         wechatAccountId: account.id,
         nickname: '球友',
         avatarUrl: '',
+        defaultLevel: DEFAULT_LEVEL,
       },
     });
     isNew = true;

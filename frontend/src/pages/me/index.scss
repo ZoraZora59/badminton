@@ -8,7 +8,7 @@
   &__header {
     position: relative;
     background: var(--grad-header);
-    padding: 0 20px 32px;
+    padding: 0 20px 40px;
     overflow: hidden;
   }
   &__statusbar {
@@ -26,7 +26,7 @@
   }
   &__hero {
     position: relative;
-    padding-top: 14px;
+    padding-top: 24px;
     display: flex;
     align-items: center;
     gap: 14px;
@@ -57,12 +57,12 @@
   &__body {
     flex: 1;
     min-height: 0;
-    margin-top: -14px;
+    margin-top: -12px;
     border-radius: 18px 18px 0 0;
     background: var(--c-bg);
   }
   &__inner {
-    padding: 16px;
+    padding: 20px 16px 16px;
   }
   &__pad {
     height: 24px;
@@ -71,11 +71,6 @@
   /* 资料卡 */
   &__card {
     gap: 0;
-  }
-  &__card-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--c-text);
   }
   &__field {
     margin-top: 14px;

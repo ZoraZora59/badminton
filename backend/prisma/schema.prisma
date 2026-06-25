@@ -84,7 +84,7 @@ model User {
   nickname        String        @default("球友")
   avatarUrl       String        @db.MediumText // 存微信头像 base64 data URL（参考 camping，避免上传/域名）；创建时显式置 ""
   gender          Gender        @default(UNKNOWN)
-  defaultLevel    SkillLevel    @default(L3)
+  defaultLevel    SkillLevel    @default(L2)
   wechatAccountId Int           @unique
   wechatAccount   WechatAccount @relation(fields: [wechatAccountId], references: [id])
   createdAt       DateTime      @default(now())
@@ -151,7 +151,7 @@ model Participant {
   user       User?      @relation(fields: [userId], references: [id])
   guestName  String?
   displayName String
-  level      SkillLevel @default(L3)
+  level      SkillLevel @default(L2)
   gender     Gender     @default(UNKNOWN)
   isGuest    Boolean    @default(false)
   createdAt  DateTime   @default(now())
