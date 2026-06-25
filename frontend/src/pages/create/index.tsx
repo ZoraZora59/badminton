@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { View, Text, Input, Textarea, Picker, Switch } from '@tarojs/components';
 import Taro, { useRouter, useDidShow } from '@tarojs/taro';
-import { PlayType, GroupMode, type CreateActivityReq } from '@badminton/shared';
+import { PlayType, type CreateActivityReq } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
 import { toastError } from '../../services/api';
@@ -57,7 +57,6 @@ export default function Create() {
   const [courtCount, setCourtCount] = useState(3);
   const [capacity, setCapacity] = useState(16);
   const [playType, setPlayType] = useState<PlayType>(PlayType.DOUBLES);
-  const [defaultMode, setDefaultMode] = useState<GroupMode>(GroupMode.BALANCED);
   const [mixedDoubles, setMixedDoubles] = useState(false);
   const [remark, setRemark] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -89,7 +88,6 @@ export default function Create() {
         setCourtCount(a.courtCount);
         setCapacity(a.capacity);
         setPlayType(a.playType);
-        setDefaultMode(a.defaultMode);
         setMixedDoubles(a.mixedDoubles ?? false);
         setRemark(cleanRemark(a.remark));
         setLoaded(true);
@@ -138,7 +136,7 @@ export default function Create() {
         capacity,
         signupDeadline: ddlIso,
         playType,
-        defaultMode,
+        // 分组模式不再在建局设置，改由分组向导（开打时）选择
         // 混双仅双打有意义；单打强制 false，避免脏数据
         mixedDoubles: playType === PlayType.DOUBLES ? mixedDoubles : false,
         remark: remark.trim() || null,
@@ -347,25 +345,6 @@ export default function Create() {
             color="#16a34a"
             onChange={(e) => setMixedDoubles(e.detail.value)}
           />
-        </View>
-
-        {/* 默认分组模式 */}
-        <View className="field">
-          <Text className="field__label">默认分组模式</Text>
-          <View className="seg">
-            <View
-              className={`seg__item ${defaultMode === GroupMode.BALANCED ? 'seg__item--on' : ''}`}
-              onClick={() => setDefaultMode(GroupMode.BALANCED)}
-            >
-              智能平衡
-            </View>
-            <View
-              className={`seg__item ${defaultMode === GroupMode.ROTATION ? 'seg__item--on' : ''}`}
-              onClick={() => setDefaultMode(GroupMode.ROTATION)}
-            >
-              自动轮转
-            </View>
-          </View>
         </View>
 
         {/* 备注 */}

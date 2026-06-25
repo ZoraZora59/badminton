@@ -87,11 +87,12 @@ export default function Grouping() {
       // 起止时间用于轮数估算提示（每次刷新，渲染区间用）
       setActStart(activity.startAt);
       setActEnd(activity.endAt);
-      // 用建局设置作为向导默认值（玩法/模式/场地数/混双/轮数），仅首次
+      // 用建局设置作为向导默认值（玩法/场地数/混双/轮数），仅首次
+      // 分组模式不在建局设置：defaultMode 缺省为 BALANCED，向导从智能平衡起步、由用户在此选择
       if (!seededRef.current) {
         seededRef.current = true;
         setPlayType(activity.playType);
-        setMode(activity.defaultMode);
+        setMode(activity.defaultMode ?? GroupMode.BALANCED);
         setCourtCount(clampCourt(activity.courtCount));
         setMixedDoubles(activity.mixedDoubles ?? false);
         // 轮数默认按活动时长估算（有结束时间时），否则沿用初始 6 轮
@@ -387,7 +388,7 @@ export default function Grouping() {
             <>
               <View className="gp-step-head">
                 <Text className="gp-step-head__t">选择分组模式</Text>
-                <Text className="gp-step-head__hint">已沿用建局设置，可按现场情况调整</Text>
+                <Text className="gp-step-head__hint">开打时按现场情况选择，决定每轮如何配对</Text>
               </View>
               <View className="gp-seg">
                 <View

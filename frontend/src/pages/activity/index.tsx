@@ -12,7 +12,7 @@ import { ensureLogin } from '../../services/auth';
 import { useUser } from '../../store/user';
 import { toastError } from '../../services/api';
 import { Avatar, Tag, PrimaryButton, Empty, ShareCard, Icon, PageFrame } from '../../components';
-import { fmtRange, fmtMonthDay, cleanRemark, playTypeText, modeText } from '../../utils/format';
+import { fmtRange, fmtMonthDay, cleanRemark, playTypeText } from '../../utils/format';
 import './index.scss';
 
 export default function Activity() {
@@ -177,7 +177,7 @@ export default function Activity() {
               <Icon name="court" size={15} color="rgba(255,255,255,0.92)" />
               <Text className="act__meta-txt">
                 {playTypeText(act.playType)}
-                {act.mixedDoubles ? ' · 混双' : ''} · {modeText(act.defaultMode)}
+                {act.mixedDoubles ? ' · 混双' : ''}
               </Text>
             </View>
           </View>

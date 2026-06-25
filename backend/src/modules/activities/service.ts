@@ -43,7 +43,8 @@ export async function createActivity(
       capacity: req.capacity,
       signupDeadline: req.signupDeadline ? new Date(req.signupDeadline) : null,
       playType: req.playType,
-      defaultMode: req.defaultMode,
+      // 建局不再设分组模式；不传时走 schema 列默认值 BALANCED
+      ...(req.defaultMode !== undefined ? { defaultMode: req.defaultMode } : {}),
       mixedDoubles: req.mixedDoubles ?? false,
       remark: req.remark ?? null,
       status: ActivityStatus.SIGNUP,

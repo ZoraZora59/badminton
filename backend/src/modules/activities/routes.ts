@@ -21,7 +21,8 @@ const CreateBody = z.object({
   capacity: z.number().int().min(2).max(100),
   signupDeadline: z.string().nullable().optional(),
   playType: z.nativeEnum(PlayType),
-  defaultMode: z.nativeEnum(GroupMode),
+  // 分组模式改为分组向导阶段选择；建局不再传，缺省由 DB 列默认值(BALANCED)兜底
+  defaultMode: z.nativeEnum(GroupMode).optional(),
   mixedDoubles: z.boolean().optional(),
   remark: z.string().max(200).nullable().optional(),
 });

@@ -96,7 +96,8 @@ export interface CreateActivityReq {
   capacity: number;
   signupDeadline?: string | null;
   playType: PlayType;
-  defaultMode: GroupMode;
+  /** 分组模式改为开打时（分组向导）选择，建局不再设置；缺省落库 BALANCED */
+  defaultMode?: GroupMode;
   /** 混双约束（仅双打）。不传按 false 处理 */
   mixedDoubles?: boolean;
   remark?: string | null;
