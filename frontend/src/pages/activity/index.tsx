@@ -147,8 +147,8 @@ export default function Activity() {
             <Text className="sc-act__count-n num">{act.signedUpCount}</Text>
             <Text className="sc-act__count-cap num">/ {act.capacity} 人已报名</Text>
           </View>
-          {/* 预览里的主 CTA 仅为「球友看到的样子」示意，不可点；真正转发走下方「转发给球友」按钮 */}
-          <View className="sc-act__cta">
+          {/* 预览里的主 CTA 仅为「球友看到的样子」示意：点它收起预览即可，不触发原生转发（转发走下方按钮）*/}
+          <View className="sc-act__cta" onClick={() => setShareOpen(false)}>
             <Text className="sc-act__cta-txt">点我报名 · 加入球局</Text>
           </View>
         </View>
