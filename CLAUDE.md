@@ -119,6 +119,51 @@ pnpm dev:frontend
 - shared 类型改动：跑 `build:shared`，再跑前端 typecheck 和后端测试。
 - 分组引擎改动：必须补引擎单测，覆盖均衡、轮空、重复搭档/对手、混双等受影响规则。
 
+## 改完即交付：自动验收 → 推送 → 部署（默认执行）
+
+每次「一个改动闭环完成」后，**默认自动**走完下面三步，不必逐次再征求同意——本节即为持续授权。仅当①验收未通过，或②所需凭证/通道不可用时，停下并如实说明。
+
+### 1. 自动验收（必须先全绿，红就停）
+
+按改动类型跑对应验证，**不允许带红推送/部署**；红了先修复再继续：
+
+- 前端页面/组件：`pnpm --filter @badminton/frontend typecheck` + `build:weapp`
+- 后端业务：`pnpm --filter @badminton/backend test`
+- shared 类型：`pnpm build:shared`，再跑前端 typecheck + 后端 test
+- 分组引擎：补/跑引擎单测
+- 纯文档/文案：Markdown 与链接检查即可
+
+### 2. 推送 master
+
+验收全绿后：`git add` 本次改动 → 简短中文 commit → `git push origin master`（本仓直接在 master 上推）。
+
+### 3. 部署——只部署本次真正改到的层
+
+- **后端代码（`backend/`，或 `shared/` 影响到后端）**：按 [`docs/deploy.md`](docs/deploy.md)「更新重新部署」执行
+
+  ```bash
+  rsync -az --exclude node_modules --exclude dist --exclude '.git' \
+    --exclude 'config.local.yml' shared backend -e ssh aliyun:/www/wwwroot/badminton/
+  ssh aliyun 'cd /www/wwwroot/badminton && pnpm install \
+    && pnpm --filter @badminton/shared build \
+    && cd backend && pnpm exec prisma generate && pnpm build \
+    && pm2 restart badminton-backend'
+  ```
+
+- **前端代码（`frontend/`）**：构建并上传小程序「开发版」（版本号自动递增）
+
+  ```bash
+  cd frontend && pnpm build:weapp && node ci/upload.cjs
+  ```
+
+- **纯文档/非交付物改动**：只做第 1、2 步，不触发任何部署。
+
+### 边界与诚实交付
+
+- `ci/upload.cjs` 只生成小程序**开发版**，不会自动发布给用户；设为体验版/提交审核仍需用户在微信后台手动操作。交付说明里如实写「已上传开发版 vX.Y.Z」，不要写成「已发布」。
+- `pm2 restart` 是**线上动作**，会短暂影响真实用户；本节已是持续授权，正常直接执行，但若 `ssh aliyun` 或上传密钥不可用，**报告失败、绝不伪装成功**。
+- 每次交付说明要列：跑了哪些验收、推了哪个 commit、部署了哪些层、小程序版本号、以及还需人工的步骤（真机/体验版/域名等）。
+
 ## Git 工作方式
 
 - 开工和收尾都看 `git status --short`。

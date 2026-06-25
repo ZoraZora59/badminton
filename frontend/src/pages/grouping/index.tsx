@@ -22,6 +22,22 @@ const clampCourt = (n: number) => Math.min(12, Math.max(1, n));
 
 const STEPS = ['选人', '玩法', '模式', '设置', '看板'];
 
+// 轮数估算：一轮 = 各场地同时打一局，casual 双打约 15–20 分钟。
+// 用活动时长给「建议轮数」与区间提示，仅作锚点，局长仍可手动调整。
+const MIN_PER_ROUND = 17;
+function estimateRounds(startIso?: string | null, endIso?: string | null) {
+  if (!startIso || !endIso) return null;
+  const durMin = Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000);
+  if (!(durMin > 0)) return null;
+  const clamp = (n: number) => Math.min(12, Math.max(1, n));
+  return {
+    durMin,
+    suggested: clamp(Math.round(durMin / MIN_PER_ROUND)),
+    lo: clamp(Math.floor(durMin / 20)),
+    hi: clamp(Math.floor(durMin / 15)),
+  };
+}
+
 const MODE_DESC: Record<string, string> = {
   BALANCED: '按水平把每片场地两队配得势均力敌，适合水平参差、想打得公平。',
   AMERICANO: '每轮系统换搭档与对手、尽量不重复，个人积分累计，适合多认识人。',
@@ -46,6 +62,9 @@ export default function Grouping() {
   const [rotation, setRotation] = useState<RotationKind>(RotationKind.AMERICANO);
   const [courtCount, setCourtCount] = useState(3);
   const [rounds, setRounds] = useState(6);
+  // 活动起止时间：用于按时长估算建议轮数（仅提示，不强绑定）
+  const [actStart, setActStart] = useState<string>('');
+  const [actEnd, setActEnd] = useState<string | null>(null);
   // 混双在建局阶段设置，这里只继承活动设置、不再提供开关
   const [mixedDoubles, setMixedDoubles] = useState(false);
   // 仅首次进入用建局设置初始化向导，之后不覆盖局长的现场调整
@@ -65,13 +84,19 @@ export default function Grouping() {
       setParticipants(list);
       // 默认全选参赛
       setSelected((prev) => (prev.size === 0 ? new Set(list.map((p) => p.id)) : prev));
-      // 用建局设置作为向导默认值（玩法/模式/场地数/混双），仅首次
+      // 起止时间用于轮数估算提示（每次刷新，渲染区间用）
+      setActStart(activity.startAt);
+      setActEnd(activity.endAt);
+      // 用建局设置作为向导默认值（玩法/模式/场地数/混双/轮数），仅首次
       if (!seededRef.current) {
         seededRef.current = true;
         setPlayType(activity.playType);
         setMode(activity.defaultMode);
         setCourtCount(clampCourt(activity.courtCount));
         setMixedDoubles(activity.mixedDoubles ?? false);
+        // 轮数默认按活动时长估算（有结束时间时），否则沿用初始 6 轮
+        const est = estimateRounds(activity.startAt, activity.endAt);
+        if (est) setRounds(est.suggested);
       }
     } catch (e) {
       toastError(e);
@@ -91,6 +116,7 @@ export default function Grouping() {
   }, [participants]);
 
   const selectedList = useMemo(() => participants.filter((p) => selected.has(p.id)), [participants, selected]);
+  const roundEst = useMemo(() => estimateRounds(actStart, actEnd), [actStart, actEnd]);
   const perCourt = playType === PlayType.DOUBLES ? 4 : 2;
   // 选人这步玩法还没选（在第 2 步），只卡「成局最小人数」=2（单打即可成局）。
   // 双打需 4 人/场：第 2 步有提示、生成赛程时再校验，避免 2 人单打局卡死在第 1 步。
@@ -431,6 +457,13 @@ export default function Grouping() {
                   </View>
                 </Picker>
               </View>
+              {roundEst ? (
+                <Text className="gp-note">
+                  本局约 {(roundEst.durMin / 60).toFixed(1)} 小时，建议
+                  {roundEst.lo === roundEst.hi ? ` ${roundEst.lo} ` : ` ${roundEst.lo}–${roundEst.hi} `}
+                  轮（按每轮约 15–20 分钟估算，可上下手动调整）。
+                </Text>
+              ) : null}
               {mixedActive ? (
                 <Text className="gp-note">本局已开启混双（建局设置）：每队尽量一男一女，性别人数不足时生成后会提示无法满足的队伍。</Text>
               ) : null}

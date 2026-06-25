@@ -23,7 +23,7 @@
 ## E2 建局与分享
 | 故事 | 接口 | 测试/页面 | 状态 |
 |---|---|---|---|
-| US-2.1 建局表单 | `POST /activities` | api.test 建局→status=SIGNUP、局长默认报名；`create` 页 | ✅ |
+| US-2.1 建局表单 | `POST /activities` | api.test 建局→status=SIGNUP、局长默认报名；`create` 页（**开打/结束时间均必填，结束需晚于开打，默认开打+2h；`endAt` 模型/接口/分享卡早已支持，本次补上表单入口**） | ✅ |
 | US-2.2 活动分享卡 | `GET /activities/:id/share-card` | **建局成功后自动弹出分享卡预览**（`ShareCard` 弹层：标题/时间/地点/已报-上限/CTA）；`activity` 页「分享球局」复用同卡；转发走 useShareAppMessage | ✅ |
 | US-2.3 编辑/取消活动 | `PATCH /activities/:id`、`POST /activities/:id/cancel` | api.test 非局长取消被拒(403)；编辑接口已实现 | ✅ |
 | US-2.4 首页三态卡 + 空态 | `GET /activities?status=` | `home` 页三态 Tab+卡片+空态；v1 不做口令/粘贴框，空态误导文案已移除（改为「分享给球友一起打」） | ✅ |
@@ -52,7 +52,7 @@
 | US-5.1 从签到名单选人 | `GET /activities/:id/participants` | api.test 物化参赛者（真人+Guest）；`grouping` 向导**①选人步骤**默认全选、可点头像排除未上场者 | ✅ |
 | US-5.2 智能平衡 | `POST …/grouping/preview {mode:BALANCED}` | engine.test 场内 {a,d}vs{b,c} 实力差最小；api.test 平衡预览 | ✅ |
 | US-5.3 自动轮转 美式/墨式 | preview `{mode:ROTATION, rotation}` | engine.test 美式无自搭档+重复受控、墨式按 standings 配对 | ✅ |
-| US-5.4 场地数/轮数/混双参数 | preview settings | engine.test 出场/轮空均衡；场地/轮数在 `grouping` 向导设置，**混双在建局阶段设置（仅双打）**，向导默认沿用建局的玩法/模式/场地数/混双 | ✅ |
+| US-5.4 场地数/轮数/混双参数 | preview settings | engine.test 出场/轮空均衡；场地/轮数在 `grouping` 向导设置，**混双在建局阶段设置（仅双打）**，向导默认沿用建局的玩法/模式/场地数/混双；**轮数默认按活动时长估算（每轮约 15–20 分钟）并给区间提示，局长仍可手动调整** | ✅ |
 | US-5.5 点选换位微调（算法给草稿，人拍板） | `POST /matches/:id/swap`（确认后）+ `grouping` 页草稿态本地交换 | api.test swap：场上↔轮空对调生效；**交互为「选中一人再点另一人(含轮空席)交换」，页面文案与之一致（不再出现"拖拽"误导）** | ✅ |
 | US-5.6 场地×轮次看板预览 | preview 返回 rounds | api.test 校验 rounds/每轮场次/队伍人数/轮空数 | ✅ |
 | US-5.7 混双约束（可选） | preview `mixedDoubles`（**建局阶段开启**） | 引擎按性别强制组队（一男一女，UNKNOWN 视作可搭配），不可满足时 `metrics.mixedViolations` 报违例队数、前端明确提示并可换位调整；engine.test「4男4女→0违例 / 6男2女→2违例 / 不开混双行为不变」 | ✅ |

@@ -49,6 +49,8 @@ export default function Create() {
   const [title, setTitle] = useState('');
   const [startDate, setStartDate] = useState(defDate);
   const [startTime, setStartTime] = useState('19:00');
+  const [endDate, setEndDate] = useState(defDate);
+  const [endTime, setEndTime] = useState('21:00');
   const [ddlDate, setDdlDate] = useState(defDate);
   const [ddlTime, setDdlTime] = useState('12:00');
   const [venue, setVenue] = useState('');
@@ -73,6 +75,11 @@ export default function Create() {
         const s = fromIso(a.startAt);
         setStartDate(s.date);
         setStartTime(s.time);
+        // 结束时间：历史活动可能无 endAt，回填为「开打 +2h」的合理默认，保证必填项有值
+        const endSrc = a.endAt ?? new Date(new Date(a.startAt).getTime() + 2 * 3600 * 1000).toISOString();
+        const eo = fromIso(endSrc);
+        setEndDate(eo.date);
+        setEndTime(eo.time);
         if (a.signupDeadline) {
           const dl = fromIso(a.signupDeadline);
           setDdlDate(dl.date);
@@ -93,9 +100,11 @@ export default function Create() {
   });
 
   const startIso = toIso(startDate, startTime);
+  const endIso = toIso(endDate, endTime);
   const ddlIso = toIso(ddlDate, ddlTime);
 
   const startLabel = fmtCardTime(startIso); // 周六 19:00
+  const endLabel = fmtCardTime(endIso);
   const ddlLabel = fmtCardTime(ddlIso);
 
   const step = (v: number, delta: number, min: number, max: number) =>
@@ -111,12 +120,17 @@ export default function Create() {
       Taro.showToast({ title: '请填写场馆 / 地点', icon: 'none' });
       return;
     }
+    if (endIso <= startIso) {
+      Taro.showToast({ title: '结束时间需晚于开打时间', icon: 'none' });
+      return;
+    }
     setSubmitting(true);
     try {
       await ensureLogin();
       const req: CreateActivityReq = {
         title: title.trim(),
         startAt: startIso,
+        endAt: endIso,
         venue: venue.trim(),
         courtCount,
         capacity,
@@ -189,7 +203,7 @@ export default function Create() {
           </View>
         </View>
 
-        {/* 开打时间 + 报名截止 */}
+        {/* 开打时间 + 结束时间 */}
         <View className="field-row">
           <View className="field field--half">
             <Text className="field__label">开打时间</Text>
@@ -208,20 +222,38 @@ export default function Create() {
             </View>
           </View>
           <View className="field field--half">
-            <Text className="field__label">报名截止</Text>
+            <Text className="field__label">结束时间</Text>
             <View className="field__pickers">
-              <Picker mode="date" value={ddlDate} onChange={(e) => setDdlDate(e.detail.value)}>
+              <Picker mode="date" value={endDate} onChange={(e) => setEndDate(e.detail.value)}>
                 <View className="picker-cell picker-cell--date">
-                  <Text className="picker-cell__val">{ddlLabel}</Text>
+                  <Text className="picker-cell__val">{endLabel}</Text>
                   <Text className="picker-cell__arrow">▾</Text>
                 </View>
               </Picker>
-              <Picker mode="time" value={ddlTime} onChange={(e) => setDdlTime(e.detail.value)}>
+              <Picker mode="time" value={endTime} onChange={(e) => setEndTime(e.detail.value)}>
                 <View className="picker-cell picker-cell--time">
-                  <Text className="picker-cell__time num">{ddlTime}</Text>
+                  <Text className="picker-cell__time num">{endTime}</Text>
                 </View>
               </Picker>
             </View>
+          </View>
+        </View>
+
+        {/* 报名截止 */}
+        <View className="field">
+          <Text className="field__label">报名截止</Text>
+          <View className="field__pickers">
+            <Picker mode="date" value={ddlDate} onChange={(e) => setDdlDate(e.detail.value)}>
+              <View className="picker-cell picker-cell--date">
+                <Text className="picker-cell__val">{ddlLabel}</Text>
+                <Text className="picker-cell__arrow">▾</Text>
+              </View>
+            </Picker>
+            <Picker mode="time" value={ddlTime} onChange={(e) => setDdlTime(e.detail.value)}>
+              <View className="picker-cell picker-cell--time">
+                <Text className="picker-cell__time num">{ddlTime}</Text>
+              </View>
+            </Picker>
           </View>
         </View>
 
