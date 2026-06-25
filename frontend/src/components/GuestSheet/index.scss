@@ -1,0 +1,58 @@
+/* 临时球友录入弹层：复用全局 .bm-sheet / .seg，下面只补昵称输入与水平 chip */
+.gs__field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.gs__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-text-3);
+}
+.gs__input {
+  height: 44px;
+  background: var(--c-card);
+  border: 1px solid var(--c-border);
+  border-radius: 12px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: var(--c-text);
+}
+.gs__ph {
+  color: var(--c-text-4);
+}
+.gs__levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.gs__lv {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 11px;
+  border-radius: 10px;
+  border: 1.5px solid var(--c-border-2);
+
+  &--on {
+    border-color: var(--c-primary);
+    background: #f3faf5;
+  }
+  &-badge {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--c-text-3);
+  }
+  &--on &-badge {
+    color: var(--c-primary-deep);
+  }
+  &-title {
+    font-size: 12px;
+    color: var(--c-text);
+  }
+}
+
+/* 昵称为空时禁用确认键（复用 .bm-sheet__confirm 基样式） */
+.bm-sheet__confirm--disabled {
+  opacity: 0.45;
+}

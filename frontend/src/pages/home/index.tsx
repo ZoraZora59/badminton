@@ -125,7 +125,10 @@ export default function Home() {
                     <View className="card__bar">
                       <View className="card__bar-fill" style={{ width: `${Math.min(100, Math.round((a.signedUpCount / a.capacity) * 100))}%` }} />
                     </View>
-                    <Text className="card__count num">{a.signedUpCount}/{a.capacity}</Text>
+                    <Text className="card__count num">
+                      {a.signedUpCount}/{a.capacity}
+                      {a.waitlistCount > 0 ? ` · 候补 ${a.waitlistCount}` : ''}
+                    </Text>
                   </View>
                 </View>
               </View>

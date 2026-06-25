@@ -1,5 +1,4 @@
 import type {
-  ActivityShareCardVM,
   ActivityStatus,
   ActivityVM,
   AddGuestReq,
@@ -40,7 +39,6 @@ export const api = {
   getActivity: (id: number) => http.get<ActivityVM>(`/activities/${id}`),
   updateActivity: (id: number, body: UpdateActivityReq) => http.patch<ActivityVM>(`/activities/${id}`, body),
   cancelActivity: (id: number) => http.post<ActivityVM>(`/activities/${id}/cancel`),
-  getShareCard: (id: number) => http.get<ActivityShareCardVM>(`/activities/${id}/share-card`),
 
   // 报名
   signup: (id: number, plusOne = 0) => http.post<SignupVM>(`/activities/${id}/signups`, { plusOne }),

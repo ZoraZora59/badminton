@@ -130,6 +130,13 @@
     font-size: 11px;
     color: var(--c-text-4);
   }
+  &__gender {
+    font-size: 10px;
+    color: var(--c-text-3);
+    background: var(--c-border-2);
+    padding: 1px 6px;
+    border-radius: 6px;
+  }
   &__del {
     flex-shrink: 0;
     width: 26px;

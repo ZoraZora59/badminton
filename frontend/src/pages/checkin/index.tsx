@@ -4,6 +4,7 @@ import Taro, { useRouter, useDidShow } from '@tarojs/taro';
 import {
   SignupStatus,
   SkillLevel,
+  Gender,
   DEFAULT_LEVEL,
   levelLabel,
   type ActivityVM,
@@ -13,8 +14,11 @@ import {
 import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
 import { toastError } from '../../services/api';
-import { Avatar, Tag, Empty, LevelSheet, PageFrame } from '../../components';
+import { Avatar, Tag, Empty, LevelSheet, GuestSheet, PageFrame } from '../../components';
 import './index.scss';
+
+/** 性别简记：混双配队要用，行内用小标显示 */
+const genderMark = (g: Gender): string => (g === Gender.MALE ? '♂ 男' : g === Gender.FEMALE ? '♀ 女' : '');
 
 /** 本地签到草稿：以 signupId 为键，记录是否实到 + 本场水平（覆盖默认） */
 interface Draft {
@@ -35,8 +39,10 @@ export default function Checkin() {
 
   // 选水平弹层：正在编辑的 signupId（null = 关闭）
   const [sheetFor, setSheetFor] = useState<number | null>(null);
-  // 临时球友（含 +1 带人占位）的本场水平弹层
-  const [guestSheet, setGuestSheet] = useState<ParticipantVM | null>(null);
+  // 临时球友录入弹层：add = 新增；edit = 编辑某个已有 Guest（含 +1 带人占位）
+  const [guestEditor, setGuestEditor] = useState<{ mode: 'add' } | { mode: 'edit'; guest: ParticipantVM } | null>(
+    null,
+  );
 
   const load = useCallback(async () => {
     try {
@@ -100,61 +106,24 @@ export default function Checkin() {
     setSheetFor(null);
   };
 
-  const addGuest = async () => {
+  // GuestSheet 提交：add → 新建临时球友；edit → 改昵称/性别/本场水平（含 +1 带人占位）
+  const submitGuest = async (data: { name: string; gender: Gender; level: SkillLevel }) => {
+    const editor = guestEditor;
+    setGuestEditor(null);
+    if (!editor) return;
     try {
-      // editable 弹层在部分基础库 / 类型定义中尚未声明，故按宽松形参调用并读取 content
-      const res = (await Taro.showModal({
-        title: '添加临时球友',
-        editable: true,
-        placeholderText: '球友昵称（无微信占位）',
-        confirmText: '添加',
-        cancelText: '取消',
-      } as Taro.showModal.Option)) as { confirm: boolean; content?: string };
-      if (!res.confirm) return;
-      const name = (res.content || '').trim();
-      if (!name) {
-        Taro.showToast({ title: '请输入球友昵称', icon: 'none' });
-        return;
+      if (editor.mode === 'add') {
+        const guest = await api.addGuest(id, { guestName: data.name, gender: data.gender, level: data.level });
+        setGuests((g) => [...g, guest]);
+        Taro.showToast({ title: '已添加', icon: 'success' });
+      } else {
+        const updated = await api.updateGuest(id, editor.guest.id, {
+          displayName: data.name,
+          gender: data.gender,
+          level: data.level,
+        });
+        setGuests((list) => list.map((x) => (x.id === editor.guest.id ? updated : x)));
       }
-      const guest = await api.addGuest(id, { guestName: name, level: DEFAULT_LEVEL });
-      setGuests((g) => [...g, guest]);
-      Taro.showToast({ title: '已添加', icon: 'success' });
-    } catch (e) {
-      toastError(e);
-    }
-  };
-
-  // 改临时球友昵称（+1 占位默认叫「XX的朋友」，局长现场补真名）
-  const renameGuest = async (g: ParticipantVM) => {
-    try {
-      const res = (await Taro.showModal({
-        title: '修改球友昵称',
-        editable: true,
-        placeholderText: '球友昵称',
-        content: g.displayName,
-        confirmText: '保存',
-        cancelText: '取消',
-      } as Taro.showModal.Option)) as { confirm: boolean; content?: string };
-      if (!res.confirm) return;
-      const name = (res.content || '').trim();
-      if (!name) {
-        Taro.showToast({ title: '请输入球友昵称', icon: 'none' });
-        return;
-      }
-      const updated = await api.updateGuest(id, g.id, { displayName: name });
-      setGuests((list) => list.map((x) => (x.id === g.id ? updated : x)));
-    } catch (e) {
-      toastError(e);
-    }
-  };
-
-  const setGuestLevel = async (level: SkillLevel) => {
-    const g = guestSheet;
-    setGuestSheet(null);
-    if (!g) return;
-    try {
-      const updated = await api.updateGuest(id, g.id, { level });
-      setGuests((list) => list.map((x) => (x.id === g.id ? updated : x)));
     } catch (e) {
       toastError(e);
     }
@@ -255,28 +224,35 @@ export default function Checkin() {
     );
   };
 
-  const renderGuest = (g: ParticipantVM, bringerName?: string) => (
-    <View key={`g-${g.id}`} className="ck-row">
-      <View className="ck-row__box ck-row__box--on">
-        <Text className="ck-row__tick">✓</Text>
-      </View>
-      <Avatar name={g.displayName} src={g.avatarUrl} size={34} />
-      <View className="ck-row__info" onClick={() => renameGuest(g)}>
-        <View className="ck-row__nameline">
-          <Text className="ck-row__name">{g.displayName}</Text>
-          <Tag text={bringerName ? '带' : '临时'} tone="accent" />
-          <Text className="ck-row__edit">✎</Text>
+  const renderGuest = (g: ParticipantVM, bringerName?: string) => {
+    const openEdit = () => setGuestEditor({ mode: 'edit', guest: g });
+    const gm = genderMark(g.gender);
+    return (
+      <View key={`g-${g.id}`} className="ck-row">
+        <View className="ck-row__box ck-row__box--on">
+          <Text className="ck-row__tick">✓</Text>
         </View>
-        <Text className="ck-row__sub">{bringerName ? `${bringerName} 带 · 点击改名` : '点击改名'}</Text>
+        <Avatar name={g.displayName} src={g.avatarUrl} size={34} />
+        <View className="ck-row__info" onClick={openEdit}>
+          <View className="ck-row__nameline">
+            <Text className="ck-row__name">{g.displayName}</Text>
+            <Tag text={bringerName ? '带' : '临时'} tone="accent" />
+            {gm ? <Text className="ck-row__gender">{gm}</Text> : null}
+            <Text className="ck-row__edit">✎</Text>
+          </View>
+          <Text className="ck-row__sub">
+            {bringerName ? `${bringerName} 带 · 点击编辑` : '点击编辑昵称 / 性别 / 水平'}
+          </Text>
+        </View>
+        <View className="ck-row__lv" onClick={openEdit}>
+          {levelLabel(g.level)} <Text className="ck-row__caret">▾</Text>
+        </View>
+        <View className="ck-row__del" onClick={() => removeGuestRow(g)}>
+          ✕
+        </View>
       </View>
-      <View className="ck-row__lv" onClick={() => setGuestSheet(g)}>
-        {levelLabel(g.level)} <Text className="ck-row__caret">▾</Text>
-      </View>
-      <View className="ck-row__del" onClick={() => removeGuestRow(g)}>
-        ✕
-      </View>
-    </View>
-  );
+    );
+  };
 
   const sheetSignup = sheetFor != null ? signups.find((s) => s.id === sheetFor) : undefined;
   const empty = signups.length === 0 && guests.length === 0;
@@ -298,12 +274,14 @@ export default function Checkin() {
         onConfirm={setLevel}
         onClose={() => setSheetFor(null)}
       />
-      <LevelSheet
-        visible={guestSheet != null}
-        value={guestSheet?.level ?? DEFAULT_LEVEL}
-        title={guestSheet ? `${guestSheet.displayName} · 本场水平` : '本场水平'}
-        onConfirm={setGuestLevel}
-        onClose={() => setGuestSheet(null)}
+      <GuestSheet
+        visible={guestEditor != null}
+        mode={guestEditor?.mode ?? 'add'}
+        name={guestEditor?.mode === 'edit' ? guestEditor.guest.displayName : ''}
+        gender={guestEditor?.mode === 'edit' ? guestEditor.guest.gender : Gender.UNKNOWN}
+        level={guestEditor?.mode === 'edit' ? guestEditor.guest.level : DEFAULT_LEVEL}
+        onConfirm={submitGuest}
+        onClose={() => setGuestEditor(null)}
       />
     </>
   );
@@ -350,7 +328,7 @@ export default function Checkin() {
             {guests.filter((g) => g.broughtBySignupId == null).map((g) => renderGuest(g))}
             {signups.filter((s) => s.status === SignupStatus.LEAVE).map(renderSignup)}
 
-            <View className="ck-add" onClick={addGuest}>
+            <View className="ck-add" onClick={() => setGuestEditor({ mode: 'add' })}>
               <Text className="ck-add__plus">＋</Text>
               添加临时球友（无微信占位）
             </View>

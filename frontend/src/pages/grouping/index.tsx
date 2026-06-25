@@ -499,6 +499,11 @@ export default function Grouping() {
                 </View>
               </View>
 
+              {/* 重复度（越低越均匀）：轮转/多轮时衡量搭档与对手是否重复 */}
+              <Text className="gp-note">
+                重复搭档 {schedule.metrics.repeatPartnerPairs} 对 · 重复对手 {schedule.metrics.repeatOpponentPairs} 对（越低越均匀）
+              </Text>
+
               {/* 混双约束提示 */}
               {mixedActive ? (
                 <View className={`gp-mixed ${mixedViolations > 0 ? 'gp-mixed--warn' : 'gp-mixed--ok'}`}>
