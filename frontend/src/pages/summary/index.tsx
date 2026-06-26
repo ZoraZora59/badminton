@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { View, Text } from '@tarojs/components';
-import Taro, { useRouter, useDidShow, useShareAppMessage } from '@tarojs/taro';
+import Taro, { useRouter, useDidShow, useShareAppMessage, useShareTimeline } from '@tarojs/taro';
 import { ActivityStatus, GroupMode, type ActivityVM, type SummaryVM, type TodayRankRowVM } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { toastError } from '../../services/api';
@@ -46,6 +46,12 @@ export default function Summary() {
       ? `${act.title} 今日战报${mvp ? ` · MVP ${mvp.displayName}` : ''}`
       : '今日战报',
     path: `/pages/summary/index?id=${id}`,
+  }));
+  useShareTimeline(() => ({
+    title: act
+      ? `${act.title} 今日战报${mvp ? ` · MVP ${mvp.displayName}` : ''}`
+      : '今日战报',
+    query: `id=${id}`,
   }));
 
   const goHome = () => Taro.switchTab({ url: '/pages/home/index' });

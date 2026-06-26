@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { View, Text } from '@tarojs/components';
-import Taro, { useRouter, useDidShow, useShareAppMessage } from '@tarojs/taro';
+import Taro, { useRouter, useDidShow, useShareAppMessage, useShareTimeline } from '@tarojs/taro';
 import {
   ActivityStatus,
   SignupStatus,
@@ -51,6 +51,10 @@ export default function Activity() {
   useShareAppMessage(() => ({
     title: act ? `${act.title}｜${fmtMonthDay(act.startAt)} ${act.venue} · 点我报名` : '羽毛球小助手',
     path: `/pages/activity/index?id=${id}`,
+  }));
+  useShareTimeline(() => ({
+    title: act ? `${act.title}｜${fmtMonthDay(act.startAt)} ${act.venue} · 点我报名` : '羽毛球小助手',
+    query: `id=${id}`,
   }));
 
   /** 任意写操作后统一重新拉取 */

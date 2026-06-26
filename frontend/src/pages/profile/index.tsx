@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { View, Text, ScrollView, Button } from '@tarojs/components';
-import Taro, { useRouter, useDidShow, useShareAppMessage } from '@tarojs/taro';
+import Taro, { useRouter, useDidShow, useShareAppMessage, useShareTimeline } from '@tarojs/taro';
 import { levelLabel, type UserStatsVM } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
@@ -39,6 +39,14 @@ export default function Profile() {
     return {
       title: `${name}的羽球战绩：${stats?.totalGames ?? 0} 局 · 胜率 ${win}%`,
       path: stats ? `/pages/profile/index?id=${stats.user.id}` : '/pages/profile/index',
+    };
+  });
+  useShareTimeline(() => {
+    const name = stats?.user.nickname ?? '我';
+    const win = stats ? Math.round(stats.winRate * 100) : 0;
+    return {
+      title: `${name}的羽球战绩：${stats?.totalGames ?? 0} 局 · 胜率 ${win}%`,
+      query: stats ? `id=${stats.user.id}` : '',
     };
   });
 

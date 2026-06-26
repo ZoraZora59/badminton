@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { View, Text, Input, Button, ScrollView } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import Taro, { useDidShow, useShareAppMessage } from '@tarojs/taro';
 import { Gender, SkillLevel, DEFAULT_LEVEL, levelLabel, type UserVM } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
@@ -46,6 +46,12 @@ export default function Me() {
   useDidShow(() => {
     load();
   });
+
+  // 「我的」转发即邀请：落到首页约球入口（个人设置页不挂朋友圈）
+  useShareAppMessage(() => ({
+    title: '羽毛球小助手｜建局、报名、计分一条龙，一起来约球',
+    path: '/pages/home/index',
+  }));
 
   const save = async () => {
     if (saving) return;

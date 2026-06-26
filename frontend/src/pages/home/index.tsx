@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
-import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
+import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro';
 import { ActivityStatus, type ActivityVM, type UserStatsVM } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
@@ -41,6 +41,15 @@ export default function Home() {
     await load();
     Taro.stopPullDownRefresh();
   });
+
+  // 首页是约球入口：转发/朋友圈都落到首页，邀请好友一起约
+  useShareAppMessage(() => ({
+    title: '羽毛球小助手｜建局、报名、计分一条龙，一起来约球',
+    path: '/pages/home/index',
+  }));
+  useShareTimeline(() => ({
+    title: '羽毛球小助手｜建局、报名、计分一条龙，一起来约球',
+  }));
 
   const signupCount = all.filter((a) => a.status === ActivityStatus.SIGNUP).length;
   const shown = all.filter((a) => a.status === tab);

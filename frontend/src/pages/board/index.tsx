@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { View, Text } from '@tarojs/components';
-import Taro, { useRouter, useDidShow } from '@tarojs/taro';
+import Taro, { useRouter, useDidShow, useShareAppMessage, useShareTimeline } from '@tarojs/taro';
 import {
   MatchStatus,
   Team,
@@ -36,6 +36,16 @@ export default function Board() {
   useDidShow(() => {
     load();
   });
+
+  // 对阵看板可围观：转发/朋友圈带上活动 id，好友点开直接看排兵
+  useShareAppMessage(() => ({
+    title: board ? `对阵看板 · 第 ${board.currentRound}/${board.totalRounds} 轮，点我围观` : '对阵看板 · 点我围观',
+    path: `/pages/board/index?id=${id}`,
+  }));
+  useShareTimeline(() => ({
+    title: board ? `羽毛球对阵看板 · 第 ${board.currentRound}/${board.totalRounds} 轮` : '羽毛球对阵看板',
+    query: `id=${id}`,
+  }));
 
   // 全量参赛者名表：用于把 byeParticipantIds 还原成名字
   const nameMap = useMemo(() => {
