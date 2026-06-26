@@ -35,6 +35,10 @@ npm-debug.log*
 .vscode/
 *.swp
 
+# 反屏蔽：部分开发者全局 gitignore 含 macOS 的 `Icon` 规则（自定义文件夹图标），
+# 会误伤同名的 Icon 组件目录，导致干净 clone 构建全红（见 issue #2）。
+!frontend/src/components/Icon/
+
 # taro
 frontend/.temp/
 frontend/.swc/
