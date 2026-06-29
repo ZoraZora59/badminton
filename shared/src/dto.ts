@@ -293,4 +293,21 @@ export interface UserStatsVM {
   nemesis: { userId: number; displayName: string; avatarUrl: string | null } | null;
   /** 近 N 局积分趋势（用于柱状图） */
   trend: number[];
+  /** 近 N 局对局明细（点击趋势展开，倒序，最新在前） */
+  recentMatches: RecentMatchVM[];
+}
+
+export interface RecentMatchVM {
+  matchId: number;
+  /** 对局完成时间（ISO 字符串） */
+  playedAt: string;
+  result: 'WIN' | 'LOSS';
+  /** 己方得分 */
+  scoreFor: number;
+  /** 对方得分 */
+  scoreAgainst: number;
+  /** 同队队友（不含自己）展示名 */
+  partners: string[];
+  /** 对手展示名 */
+  opponents: string[];
 }

@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
-import type { UserStatsVM } from '@badminton/shared';
+import type { UserStatsVM, RecentMatchVM } from '@badminton/shared';
 import { Team } from '@badminton/shared';
 import { Errors } from '../../lib/errors';
 import { toUserVM } from '../users/mapper';
@@ -31,6 +31,7 @@ export async function getUserStats(prisma: PrismaClient, userId: number): Promis
     bestPartner: null,
     nemesis: null,
     trend: [],
+    recentMatches: [],
   };
   if (myPartIds.size === 0) return empty;
 
@@ -47,6 +48,7 @@ export async function getUserStats(prisma: PrismaClient, userId: number): Promis
   const partnerAgg = new Map<number, Agg>(); // partnerUserId -> {games, wins}
   const nemesisAgg = new Map<number, Agg>(); // opponentUserId -> {games, wins(=他赢我的次数)}
   const trendPairs: Array<{ at: number; pts: number }> = [];
+  const matchRows: Array<{ at: number; row: RecentMatchVM }> = [];
 
   for (const mp of mps) {
     const match = mp.match;
@@ -59,8 +61,13 @@ export async function getUserStats(prisma: PrismaClient, userId: number): Promis
     points += scoreFor;
     trendPairs.push({ at: match.createdAt.getTime(), pts: scoreFor });
 
+    const partners: string[] = [];
+    const opponents: string[] = [];
     for (const p of match.players) {
       if (myPartIds.has(p.participantId)) continue;
+      if (p.team === myTeam) partners.push(p.participant.displayName);
+      else opponents.push(p.participant.displayName);
+
       const otherUserId = p.participant.userId;
       if (otherUserId == null) continue; // Guest 不进跨局聚合
       if (p.team === myTeam) {
@@ -75,6 +82,19 @@ export async function getUserStats(prisma: PrismaClient, userId: number): Promis
         nemesisAgg.set(otherUserId, a);
       }
     }
+
+    matchRows.push({
+      at: match.createdAt.getTime(),
+      row: {
+        matchId: match.id,
+        playedAt: match.createdAt.toISOString(),
+        result: iWon ? 'WIN' : 'LOSS',
+        scoreFor,
+        scoreAgainst,
+        partners,
+        opponents,
+      },
+    });
   }
 
   const totalGames = wins + losses;
@@ -89,6 +109,7 @@ export async function getUserStats(prisma: PrismaClient, userId: number): Promis
   const refMap = new Map(refUsers.map((u) => [u.id, u]));
 
   const trend = trendPairs.sort((a, b) => a.at - b.at).slice(-7).map((t) => t.pts);
+  const recentMatches = matchRows.sort((a, b) => b.at - a.at).slice(0, 10).map((m) => m.row);
 
   return {
     user: toUserVM(user),
@@ -104,6 +125,7 @@ export async function getUserStats(prisma: PrismaClient, userId: number): Promis
       ? { userId: nemesisId, displayName: refMap.get(nemesisId)!.nickname, avatarUrl: refMap.get(nemesisId)!.avatarUrl || null }
       : null,
     trend,
+    recentMatches,
   };
 }
 

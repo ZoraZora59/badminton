@@ -9,6 +9,14 @@ import { Avatar, Empty, PrimaryButton } from '../../components';
 import { goBack } from '../../utils/nav';
 import './index.scss';
 
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const m = `${d.getMonth() + 1}`.padStart(2, '0');
+  const day = `${d.getDate()}`.padStart(2, '0');
+  return `${m}-${day}`;
+}
+
 export default function Profile() {
   const router = useRouter();
   const queryId = Number(router.params.id);
@@ -16,6 +24,24 @@ export default function Profile() {
 
   const [stats, setStats] = useState<UserStatsVM | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [showRecent, setShowRecent] = useState(false);
+
+  const explainPartner = useCallback(() => {
+    Taro.showModal({
+      title: '最佳搭档',
+      content: '和你同队并肩作战、一起赢球次数最多的队友。一起赢得越多，TA 越靠前。',
+      showCancel: false,
+      confirmText: '知道了',
+    });
+  }, []);
+  const explainNemesis = useCallback(() => {
+    Taro.showModal({
+      title: '苦主',
+      content: '作为对手时最常赢你的人。被同一个人赢得越多，TA 越容易成为你的“苦主”。',
+      showCancel: false,
+      confirmText: '知道了',
+    });
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -52,6 +78,7 @@ export default function Profile() {
 
   const user = stats?.user;
   const trend = stats?.trend ?? [];
+  const recentMatches = stats?.recentMatches ?? [];
   const trendMax = Math.max(1, ...trend);
   const bars = trend.length ? trend : [0, 0, 0, 0, 0, 0, 0];
   const isNewbie = !!stats && stats.totalGames === 0;
@@ -122,31 +149,37 @@ export default function Profile() {
 
             {/* 最佳搭档 / 苦主 */}
             <View className="profile__row">
-              <View className="profile__mini">
+              <View className="profile__mini" onClick={explainPartner}>
                 <View className="profile__mini-av profile__mini-av--partner">
                   <Avatar name={stats?.bestPartner?.displayName} src={stats?.bestPartner?.avatarUrl} size={34} />
                 </View>
                 <View className="profile__mini-info">
-                  <Text className="profile__mini-label">最佳搭档</Text>
+                  <Text className="profile__mini-label">最佳搭档<Text className="profile__mini-q">?</Text></Text>
                   <Text className="profile__mini-name">{stats?.bestPartner?.displayName ?? '暂无'}</Text>
                 </View>
               </View>
-              <View className="profile__mini">
+              <View className="profile__mini" onClick={explainNemesis}>
                 <View className="profile__mini-av profile__mini-av--nemesis">
                   <Avatar name={stats?.nemesis?.displayName} src={stats?.nemesis?.avatarUrl} size={34} />
                 </View>
                 <View className="profile__mini-info">
-                  <Text className="profile__mini-label">苦主</Text>
+                  <Text className="profile__mini-label">苦主<Text className="profile__mini-q">?</Text></Text>
                   <Text className="profile__mini-name">{stats?.nemesis?.displayName ?? '暂无'}</Text>
                 </View>
               </View>
             </View>
 
-            {/* 积分趋势 */}
-            <View className="profile__trend">
+            {/* 积分趋势（点击展开近期对局） */}
+            <View className="profile__trend" onClick={() => recentMatches.length && setShowRecent((s) => !s)}>
               <View className="profile__trend-head">
                 <Text className="profile__trend-title">积分趋势</Text>
-                <Text className="profile__trend-sub">近 {trend.length || 7} 局 ↗</Text>
+                {recentMatches.length ? (
+                  <Text className="profile__trend-sub">
+                    {showRecent ? '收起对局 ▲' : '看近期对局 ▼'}
+                  </Text>
+                ) : (
+                  <Text className="profile__trend-sub">近 {trend.length || 7} 局 ↗</Text>
+                )}
               </View>
               <View className="profile__bars">
                 {bars.map((v, i) => {
@@ -162,6 +195,34 @@ export default function Profile() {
                 })}
               </View>
             </View>
+
+            {/* 近期对局明细 */}
+            {showRecent && recentMatches.length ? (
+              <View className="profile__matches">
+                {recentMatches.map((m) => {
+                  const win = m.result === 'WIN';
+                  return (
+                    <View key={m.matchId} className="profile__match">
+                      <View className={`profile__match-tag ${win ? 'profile__match-tag--win' : 'profile__match-tag--loss'}`}>
+                        {win ? '胜' : '负'}
+                      </View>
+                      <View className="profile__match-body">
+                        <View className="profile__match-line">
+                          <Text className="profile__match-vs">
+                            {m.partners.length ? `我 / ${m.partners.join('、')}` : '我'}
+                          </Text>
+                          <Text className="profile__match-score num">{m.scoreFor} : {m.scoreAgainst}</Text>
+                        </View>
+                        <View className="profile__match-line profile__match-line--sub">
+                          <Text className="profile__match-opp">vs {m.opponents.join('、') || '对手'}</Text>
+                          <Text className="profile__match-date">{formatDate(m.playedAt)}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : null}
           </>
         )}
         <View className={`profile__pad${!isOther && stats ? '' : ' profile__pad--bare'}`} />
