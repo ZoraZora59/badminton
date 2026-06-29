@@ -94,7 +94,7 @@ export async function getUserStats(prisma: PrismaClient, userId: number): Promis
   const winRate = totalGames ? Math.round((wins / totalGames) * 100) / 100 : 0;
 
   const bestPartnerId = pickTop(partnerAgg);
-  // 苦主 = 和你搭档胜率最低的人；若与最佳搭档是同一人（搭档样本太少）则不展示
+  // 苦主 = 和你一起输球次数最多的搭档；若与最佳搭档是同一人（搭档样本太少）则不展示
   const nemesisId = pickWorstPartner(partnerAgg, bestPartnerId);
   const refUserIds = [bestPartnerId, nemesisId].filter((x): x is number => x != null);
   const refUsers = refUserIds.length
@@ -137,17 +137,17 @@ function pickTop(agg: Map<number, Agg>): number | null {
 }
 
 /**
- * 取「和你搭档胜率最低」者：按胜率升序，胜率相同则一起打得更多的更算苦主。
+ * 取「和你一起输球次数最多」者（与最佳搭档口径一致，都看次数）：按 losses 优先，其次 games。
  * 命中的就是最佳搭档时（如只有一个搭档样本）返回 null，避免同一人既是最佳又是苦主。
  */
 function pickWorstPartner(agg: Map<number, Agg>, excludeId: number | null): number | null {
   let worstId: number | null = null;
-  let worstRate = Infinity;
+  let worstLosses = -1;
   let worstGames = 0;
   for (const [id, a] of agg) {
-    const rate = a.wins / a.games;
-    if (rate < worstRate || (rate === worstRate && a.games > worstGames)) {
-      worstRate = rate;
+    const losses = a.games - a.wins;
+    if (losses > worstLosses || (losses === worstLosses && a.games > worstGames)) {
+      worstLosses = losses;
       worstGames = a.games;
       worstId = id;
     }

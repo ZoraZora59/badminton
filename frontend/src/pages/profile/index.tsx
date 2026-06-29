@@ -37,7 +37,7 @@ export default function Profile() {
   const explainNemesis = useCallback(() => {
     Taro.showModal({
       title: '苦主',
-      content: '和你同队搭档、但一起打下来胜率最低的人。可能只是配合还没磨合好，多打几场说不定就翻盘了。',
+      content: '和你同队搭档、一起输球次数最多的人。可能只是配合还没磨合好，多打几场说不定就翻盘了。',
       showCancel: false,
       confirmText: '知道了',
     });
