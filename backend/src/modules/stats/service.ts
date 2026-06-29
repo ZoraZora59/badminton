@@ -45,8 +45,7 @@ export async function getUserStats(prisma: PrismaClient, userId: number): Promis
   let wins = 0;
   let losses = 0;
   let points = 0;
-  const partnerAgg = new Map<number, Agg>(); // partnerUserId -> {games, wins}
-  const nemesisAgg = new Map<number, Agg>(); // opponentUserId -> {games, wins(=他赢我的次数)}
+  const partnerAgg = new Map<number, Agg>(); // partnerUserId -> {games, wins}（同队搭档：最佳搭档 / 苦主都从这里取）
   const trendPairs: Array<{ at: number; pts: number }> = [];
   const matchRows: Array<{ at: number; row: RecentMatchVM }> = [];
 
@@ -68,19 +67,13 @@ export async function getUserStats(prisma: PrismaClient, userId: number): Promis
       if (p.team === myTeam) partners.push(p.participant.displayName);
       else opponents.push(p.participant.displayName);
 
+      // 仅统计同队真人搭档；Guest（无 userId）与对手都不进跨局搭档聚合
       const otherUserId = p.participant.userId;
-      if (otherUserId == null) continue; // Guest 不进跨局聚合
-      if (p.team === myTeam) {
-        const a = partnerAgg.get(otherUserId) ?? { games: 0, wins: 0 };
-        a.games += 1;
-        if (iWon) a.wins += 1;
-        partnerAgg.set(otherUserId, a);
-      } else {
-        const a = nemesisAgg.get(otherUserId) ?? { games: 0, wins: 0 };
-        a.games += 1;
-        if (!iWon) a.wins += 1; // 他赢我
-        nemesisAgg.set(otherUserId, a);
-      }
+      if (otherUserId == null || p.team !== myTeam) continue;
+      const a = partnerAgg.get(otherUserId) ?? { games: 0, wins: 0 };
+      a.games += 1;
+      if (iWon) a.wins += 1;
+      partnerAgg.set(otherUserId, a);
     }
 
     matchRows.push({
@@ -101,7 +94,8 @@ export async function getUserStats(prisma: PrismaClient, userId: number): Promis
   const winRate = totalGames ? Math.round((wins / totalGames) * 100) / 100 : 0;
 
   const bestPartnerId = pickTop(partnerAgg);
-  const nemesisId = pickTop(nemesisAgg);
+  // 苦主 = 和你搭档胜率最低的人；若与最佳搭档是同一人（搭档样本太少）则不展示
+  const nemesisId = pickWorstPartner(partnerAgg, bestPartnerId);
   const refUserIds = [bestPartnerId, nemesisId].filter((x): x is number => x != null);
   const refUsers = refUserIds.length
     ? await prisma.user.findMany({ where: { id: { in: refUserIds } } })
@@ -140,4 +134,23 @@ function pickTop(agg: Map<number, Agg>): number | null {
     }
   }
   return bestId;
+}
+
+/**
+ * 取「和你搭档胜率最低」者：按胜率升序，胜率相同则一起打得更多的更算苦主。
+ * 命中的就是最佳搭档时（如只有一个搭档样本）返回 null，避免同一人既是最佳又是苦主。
+ */
+function pickWorstPartner(agg: Map<number, Agg>, excludeId: number | null): number | null {
+  let worstId: number | null = null;
+  let worstRate = Infinity;
+  let worstGames = 0;
+  for (const [id, a] of agg) {
+    const rate = a.wins / a.games;
+    if (rate < worstRate || (rate === worstRate && a.games > worstGames)) {
+      worstRate = rate;
+      worstGames = a.games;
+      worstId = id;
+    }
+  }
+  return worstId != null && worstId !== excludeId ? worstId : null;
 }
