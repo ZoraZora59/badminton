@@ -36,7 +36,7 @@ export default function Profile() {
   }, []);
   const explainNemesis = useCallback(() => {
     Taro.showModal({
-      title: '苦主',
+      title: '难兄难弟',
       content: '和你同队搭档、一起输球次数最多的人。可能只是配合还没磨合好，多打几场说不定就翻盘了。',
       showCancel: false,
       confirmText: '知道了',
@@ -147,7 +147,7 @@ export default function Profile() {
               </View>
             </View>
 
-            {/* 最佳搭档 / 苦主 */}
+            {/* 最佳搭档 / 难兄难弟 */}
             <View className="profile__row">
               <View className="profile__mini" onClick={explainPartner}>
                 <View className="profile__mini-av profile__mini-av--partner">
@@ -163,7 +163,7 @@ export default function Profile() {
                   <Avatar name={stats?.nemesis?.displayName} src={stats?.nemesis?.avatarUrl} size={34} />
                 </View>
                 <View className="profile__mini-info">
-                  <Text className="profile__mini-label">苦主<Text className="profile__mini-q">?</Text></Text>
+                  <Text className="profile__mini-label">难兄难弟<Text className="profile__mini-q">?</Text></Text>
                   <Text className="profile__mini-name">{stats?.nemesis?.displayName ?? '暂无'}</Text>
                 </View>
               </View>

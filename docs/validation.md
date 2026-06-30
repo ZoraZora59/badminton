@@ -76,7 +76,7 @@
 ## E8 个人战绩
 | 故事 | 接口 | 测试/页面 | 状态 |
 |---|---|---|---|
-| US-8.1 累计战绩（局数/胜率/积分/最佳搭档/苦主/趋势） | `GET /users/:id/stats` | api.test totalGames=wins+losses；`profile` 页 | ✅ |
+| US-8.1 累计战绩（局数/胜率/积分/最佳搭档/难兄难弟/趋势） | `GET /users/:id/stats` | api.test totalGames=wins+losses；`profile` 页 | ✅ |
 | US-8.2 分享战绩 | 同上 | `profile` 页分享 | ✅ |
 | US-8.3 只读查看他人战绩 | `GET /users/:id/stats`（免登录） | `profile?id=` 只读 | ✅ |
 
