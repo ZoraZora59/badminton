@@ -1,0 +1,6 @@
+#!/bin/bash
+# .git/hooks/pre-push 垫片：转发到仓库内受版本管理的钩子脚本（更新后无需重装）。
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+if [ -f "$REPO_ROOT/scripts/git-hooks/pre-push" ]; then
+  bash "$REPO_ROOT/scripts/git-hooks/pre-push" "$@" || exit 1
+fi

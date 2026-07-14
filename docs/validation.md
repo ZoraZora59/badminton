@@ -1,7 +1,7 @@
 # 验证报告 · 覆盖对账与手动清单
 
 > 原则：**覆盖要被证明，不是被假设。** 下表把每条 v1 用户故事映射到接口与自动化测试。
-> 自动化：`pnpm --filter @badminton/backend test`（引擎单测 `test/engine.test.ts` + E1–E8 接口走查 `test/api.test.ts`，连真实 `badminton_dev`）。
+> 自动化：`pnpm --filter @badminton/backend test`（= `test:unit` 引擎+等级映射纯函数单测，无库可跑；+ `test:api` E1–E8 接口走查/负向守卫 + 跨局战绩单测，连真实 `badminton_dev`）；前端 `pnpm --filter @badminton/frontend test`（红线文案清洗、时区格式化、请求包装器）；UI 门禁 `pnpm --filter @badminton/frontend verify:ui`（微信开发者工具，DOM 断言 + console error=0 + 报名回归路径）。
 > 图例：✅ 接口+自动化测试覆盖 · 🟡 接口已实现+前端页面有，自动化未专项断言 · ⚪ v1 可选/后置未做。
 > UI 框架：全站已统一为「顶部小 header + 主体 + 底部常驻 tab」，详见 [`ui-framework-unification-2026-06-25.md`](./ui-framework-unification-2026-06-25.md)（含待真机验证项）。
 
@@ -25,7 +25,7 @@
 |---|---|---|---|
 | US-2.1 建局表单 | `POST /activities` | api.test 建局→status=SIGNUP、局长默认报名；`create` 页（**开打/结束时间均必填，结束需晚于开打，默认开打+2h；`endAt` 模型/接口/分享卡早已支持，本次补上表单入口**） | ✅ |
 | US-2.2 活动分享卡 | `GET /activities/:id/share-card` | **建局成功后自动弹出分享卡预览**（`ShareCard` 弹层：标题/时间/地点/已报-上限/CTA）；`activity` 页「分享球局」复用同卡；转发走 useShareAppMessage | ✅ |
-| US-2.3 编辑/取消活动 | `PATCH /activities/:id`、`POST /activities/:id/cancel` | api.test 非局长取消被拒(403)；编辑接口已实现 | ✅ |
+| US-2.3 编辑/取消活动 | `PATCH /activities/:id`、`POST /activities/:id/cancel` | api.test「G1」非局长 cancel/PATCH → 403 且活动状态不受影响；「R1」局长空 body 取消 → CANCELLED | ✅ |
 | US-2.4 首页三态卡 + 空态 | `GET /activities?status=` | `home` 页三态 Tab+卡片+空态；v1 不做口令/粘贴框，空态误导文案已移除（改为「分享给球友一起打」） | ✅ |
 
 ## E3 报名 / 候补 / 请假
@@ -44,7 +44,7 @@
 | US-4.2 自助签到 | `POST /activities/:id/checkin/me` | 非局长在 `activity` 页「我已到场·签到」自助签到（可撤销）；局长 `checkin` 页可见结果并调整；api.test「E4.2」覆盖撤/签开关 + 请假者被拒 | ✅ |
 | US-4.3 临时球友 Guest | `POST /activities/:id/participants`、`PATCH/DELETE …/participants/:pid` | api.test 加 Guest（isGuest=true，无 openid）；Guest 与 +1 占位均可改名/**改性别**/改本场水平/移除（仅局长；已进对阵不可删）。**加人/改人统一走 `GuestSheet` 弹层，加人时即可选性别与水平；性别用于混双配队，补齐了此前 Guest 只能 UNKNOWN 的入口缺口** | ✅ |
 | US-4.4 确认/调整本场水平 | checkin `perGameLevel` | api.test 设本场水平；`checkin` 页点 LevelSheet | ✅ |
-| US-4.5 候补补位 | `POST …/signups/:signupId/promote` | 自动补位已在 api.test 证明；`checkin` 页补位按钮用于局长现场手动补位，操作前需确认场地和人数 | ✅ |
+| US-4.5 候补补位 | `POST …/signups/:signupId/promote` | 自动补位 api.test E3；手动补位 api.test「G2」：局长 promote 候补转正（满员也转正=允许超员、局长拍板）、非局长 403、非候补记录 409；严格队列语义见「G4」（队首带 +1 塞不下即停、不跳位） | ✅ |
 
 ## E5 双打分队分组 ★
 | 故事 | 接口 | 测试/页面 | 状态 |
@@ -76,7 +76,7 @@
 ## E8 个人战绩
 | 故事 | 接口 | 测试/页面 | 状态 |
 |---|---|---|---|
-| US-8.1 累计战绩（局数/胜率/积分/最佳搭档/难兄难弟/趋势） | `GET /users/:id/stats` | api.test totalGames=wins+losses；`profile` 页 | ✅ |
+| US-8.1 累计战绩（局数/胜率/积分/最佳搭档/难兄难弟/趋势） | `GET /users/:id/stats` | `test/stats.test.ts` 6 例：最佳搭档按共同胜场、难兄难弟按一起输球次数、唯一搭档不与最佳撞人（null）、Guest/对手不进聚合、trend 近7升序、recentMatches 近10倒序、winRate 两位小数；api.test totalGames=wins+losses | ✅ |
 | US-8.2 分享战绩 | 同上 | `profile` 页分享 | ✅ |
 | US-8.3 只读查看他人战绩 | `GET /users/:id/stats`（免登录） | `profile?id=` 只读 | ✅ |
 
@@ -85,15 +85,30 @@
 - 🔴 不做球队/俱乐部：纯活动模型，无成员管理/入队。
 - ⏳ 跨局排行榜、订阅消息：v1.5 后置，未实现（符合范围）。
 
-## 后端自动化测试结果
+## 自动化测试结果
 
 ```
-pnpm --filter @badminton/backend test
-  ✓ test/engine.test.ts (13 tests)  # +混双约束 3 例（满足/不满足/不开混双不变）
-  ✓ test/api.test.ts (4 tests)      # E1 登录+1:1；E2–E8 完整走查（含 E4.2 自助签到）；R1 空 body 兜底；E3+ +1 带人物化/改名/移除
-  Test Files  2 passed (2)
-       Tests  17 passed (17)
+pnpm --filter @badminton/backend test        # 全量（2026-07-14 实测全绿）
+  ✓ test/engine.test.ts (22 tests)  # 原 13 例 + 重复对手受控、混双×美式、UNKNOWN 性别混双、
+                                    #   非整除轮空公平、单打×美式、混双违例跨轮累计、seed 差异性
+  ✓ test/levels.test.ts (7 tests)   # shared 等级映射：权重单调、DEFAULT_LEVEL、未知值兜底
+  ✓ test/api.test.ts (9 tests)      # E1 登录+1:1；E2–E8 完整走查；R1 空 body 兜底；E3+ +1 物化；
+                                    #   G1 非局长 cancel/PATCH 403；G2 手动 promote；G3 报名幂等与 +1 容量；
+                                    #   G4 候补严格队列；G5 开打守卫/Guest 守卫/二次 confirm 覆盖语义
+  ✓ test/stats.test.ts (6 tests)    # 最佳搭档/难兄难弟/趋势/近局/胜率口径
+  Test Files  4 passed (4)
+       Tests  44 passed (44)
+
+pnpm --filter @badminton/backend test:unit   # engine+levels，无需数据库（CI / pre-push 用）
+pnpm --filter @badminton/backend test:api    # api+stats，需本机 config.local.yml + dev 库
+
+pnpm --filter @badminton/frontend test       # 前端单测（2026-07-14 实测全绿）
+  ✓ test/format.test.ts             # cleanRemark 不碰钱红线全集（AA/费用/元/人 等逐分支）+ UTC→+8 格式化
+  ✓ test/api.test.ts                # 非 GET 空 body 兜底 {}、401 清 token、ApiError 分支
+  Tests  30 passed (30)
 ```
+
+CI：`.github/workflows/ci.yml` 每次 push master 跑 shared 构建 + 前端 typecheck/test + 后端构建/test:unit（留痕）；本地 pre-push 钩子（`scripts/git-hooks/`）跑同一套。
 
 种子数据：`pnpm db:seed` 生成「周六晚·高手羽你局」（进行中，含今日榜）与「周日上午·新手友谊赛」（8 正选+2 候补），人物对齐设计稿（林丹丹/王小明/陈大锤…）。
 

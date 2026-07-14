@@ -64,9 +64,13 @@
 pnpm install
 pnpm build:shared
 pnpm --filter @badminton/frontend typecheck
+pnpm --filter @badminton/frontend test        # 前端单测（纯逻辑：红线文案清洗、请求包装器等）
 pnpm --filter @badminton/frontend build:weapp
 pnpm --filter @badminton/backend build
-pnpm --filter @badminton/backend test
+pnpm --filter @badminton/backend test         # 全量 = test:unit + test:api
+pnpm --filter @badminton/backend test:unit    # 纯函数单测（引擎+等级映射），无需数据库，CI/pre-push 用
+pnpm --filter @badminton/backend test:api     # 接口/统计测试，需 config.local.yml + dev 库
+pnpm --filter @badminton/frontend verify:ui   # 发版前本地 UI 门禁（需微信开发者工具，详见 frontend/ci/verify-ui.sh）
 ```
 
 后端开发：
@@ -114,10 +118,11 @@ pnpm dev:frontend
 ## 验证策略
 
 - 小范围文案或文档改动：检查 Markdown 和链接即可。
-- 前端页面改动：至少跑 `typecheck` 和 `build:weapp`；关键体验用微信开发者工具或真机看一遍。
-- 后端业务改动：至少跑 `pnpm --filter @badminton/backend test`。
+- 前端页面改动：至少跑 `typecheck`、`pnpm --filter @badminton/frontend test` 和 `build:weapp`；涉及报名签到闭环页面时再跑 `verify:ui`（微信开发者工具门禁），或真机看一遍。
+- 后端业务改动：至少跑 `pnpm --filter @badminton/backend test`（含 test:api，需本机 config.local.yml + dev 库；无库环境至少跑 `test:unit`）。
 - shared 类型改动：跑 `build:shared`，再跑前端 typecheck 和后端测试。
 - 分组引擎改动：必须补引擎单测，覆盖均衡、轮空、重复搭档/对手、混双等受影响规则。
+- 推送门禁：本地装有 pre-push 钩子（`scripts/git-hooks/`，安装方式见脚本头注释），推 master 会自动跑 build:shared + 前端 typecheck/test + 后端 test:unit；GitHub Actions（`.github/workflows/ci.yml`）在 push 后复跑同一套并留痕，红了要回头修。
 
 ## 改完即交付：自动验收 → 推送 → 部署（默认执行）
 
@@ -127,7 +132,7 @@ pnpm dev:frontend
 
 按改动类型跑对应验证，**不允许带红推送/部署**；红了先修复再继续：
 
-- 前端页面/组件：`pnpm --filter @badminton/frontend typecheck` + `build:weapp`
+- 前端页面/组件：`pnpm --filter @badminton/frontend typecheck` + `test` + `build:weapp`；涉及报名签到闭环页面改动，上传小程序前先跑 `pnpm --filter @badminton/frontend verify:ui`（console error=0 且断言全过才放行）
 - 后端业务：`pnpm --filter @badminton/backend test`
 - shared 类型：`pnpm build:shared`，再跑前端 typecheck + 后端 test
 - 分组引擎：补/跑引擎单测

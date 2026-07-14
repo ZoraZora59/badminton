@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# 本地 pre-push 门禁：直推 master 前的最小验收（约 1-2 分钟，全部无需数据库）。
+# 安装（一次性，.git/hooks 不入库）：
+#   cp scripts/git-hooks/install-shim.pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+# 跳过（紧急场景）：git push --no-verify
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+echo "[pre-push] 1/3 build:shared"
+pnpm build:shared
+
+echo "[pre-push] 2/3 前端 typecheck + 单测"
+pnpm --filter @badminton/frontend typecheck
+pnpm --filter @badminton/frontend test
+
+echo "[pre-push] 3/3 后端纯函数单测"
+pnpm --filter @badminton/backend test:unit
+
+echo "[pre-push] 全绿，放行。需要 dev 库的全量后端测试请另跑 pnpm --filter @badminton/backend test"

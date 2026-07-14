@@ -1,0 +1,46 @@
+# 最小 CI：直推 master 的「红灯留痕」。
+# 只跑无外部依赖的验收（构建 + typecheck + 纯函数单测）；
+# 需要 dev 库的 test:api / test（全量）仍在本地跑（见 CLAUDE.md 验收矩阵）。
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4 # 版本取自根 package.json 的 packageManager
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建 shared
+        run: pnpm build:shared
+
+      - name: 前端 typecheck
+        run: pnpm --filter @badminton/frontend typecheck
+
+      - name: 前端单测
+        run: pnpm --filter @badminton/frontend test
+
+      - name: 后端 prisma generate
+        run: pnpm --filter @badminton/backend db:generate
+        env:
+          # generate 不连库；占位值仅避免 env 解析报错
+          DATABASE_URL: "mysql://ci:ci@127.0.0.1:3306/ci"
+
+      - name: 后端构建
+        run: pnpm --filter @badminton/backend build
+
+      - name: 后端纯函数单测（引擎 + 等级映射）
+        run: pnpm --filter @badminton/backend test:unit
