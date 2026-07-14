@@ -19,10 +19,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
+          # 不开 pnpm 缓存：pnpm-lock.yaml 被开发机全局 gitignore、未入库，
+          # cache 与 --frozen-lockfile 都依赖 lockfile。若未来 lockfile 入库可恢复两者。
 
       - name: 安装依赖
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: 构建 shared
         run: pnpm build:shared
