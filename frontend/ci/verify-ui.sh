@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# DevTools UI/UX 验收一键脚本（本地）。
+# DevTools UI/UX 验收门禁一键脚本（本地）。
 # 前置（仅一次手动）：微信开发者工具 → 设置 → 安全设置 → 开启「服务端口」，并保持已扫码登录。
 # 运行：先在 backend/ 跑 `pnpm dev`（mock 后端 :3000），再执行：bash frontend/ci/verify-ui.sh
 # 产物：/tmp/badminton-shots/*.png + 控制台 error 汇总。
+# 门禁语义：automator-verify.cjs 里任一 DOM 断言失败或业务 console error > 0 → 非 0 退出；
+#          seed 契约（活动标题/人数/轮次）与选择器常量集中在 automator-verify.cjs 头部，改 seed 需同步。
 set -euo pipefail
 cd "$(dirname "$0")/.."   # -> frontend/
 API="http://127.0.0.1:3000/api"
@@ -23,5 +25,11 @@ LIN=$(curl -s -X POST "$API/auth/login" -H 'Content-Type: application/json' -d '
 export LIN_TOKEN=$(python3 -c "import sys,json;print(json.loads(sys.argv[1])['data']['token'])" "$LIN")
 export LIN_USER=$(python3 -c "import sys,json;print(json.dumps(json.loads(sys.argv[1])['data']['user']))" "$LIN")
 
-echo "📸 启动开发者工具自动化截图…（若报 http port，请先开启服务端口）"
-node ci/automator-verify.cjs
+echo "🚦 启动开发者工具自动化门禁（截图 + DOM 断言 + 报名回归）…（若报 http port，请先开启服务端口）"
+if node ci/automator-verify.cjs; then
+  echo "✅ UI 门禁全绿，截图在 /tmp/badminton-shots/"
+else
+  code=$?
+  echo "❌ UI 门禁未通过（exit $code），失败清单见上方输出"
+  exit "$code"
+fi
