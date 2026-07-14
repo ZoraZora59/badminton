@@ -389,3 +389,277 @@ describe('E3+「+1 带人」物化为可改名 / 可移除的参赛者', () => {
     await app.prisma.activity.deleteMany({ where: { id: aid } });
   });
 });
+
+/** 建局的公共入参（各守卫用例按需覆盖字段） */
+function activityPayload(title: string, overrides: Record<string, unknown> = {}) {
+  return {
+    title,
+    startAt: new Date('2026-07-20T19:00:00+08:00').toISOString(),
+    venue: '测试馆',
+    courtCount: 1,
+    capacity: 4,
+    playType: PlayType.DOUBLES,
+    defaultMode: GroupMode.BALANCED,
+    ...overrides,
+  };
+}
+
+describe('G1 鉴权负向：非局长操作活动', () => {
+  // docs/validation.md US-2.3 声称已有「非局长取消 → 403」用例，此前实际不存在，本块补真
+  it('非局长 cancel / PATCH 活动 → 403，活动状态不受影响', async () => {
+    const host = await login(`t${RUN}_g1_host`);
+    const outsider = await login(`t${RUN}_g1_out`);
+
+    const created = await api('POST', '/api/activities', {
+      token: host.token,
+      body: activityPayload('鉴权守卫局'),
+    });
+    expect(created.body.code).toBe(0);
+    const aid = created.body.data.id;
+
+    // 非局长取消 → 403（activities/service assertHost）
+    const cancel = await api('POST', `/api/activities/${aid}/cancel`, { token: outsider.token });
+    expect(cancel.status).toBe(403);
+
+    // 非局长编辑 → 403
+    const edit = await api('PATCH', `/api/activities/${aid}`, {
+      token: outsider.token,
+      body: { title: '越权改名' },
+    });
+    expect(edit.status).toBe(403);
+
+    // 越权操作没有落库副作用：仍在报名中、标题未变
+    const detail = await api('GET', `/api/activities/${aid}`, { token: host.token });
+    expect(detail.body.data.status).toBe(ActivityStatus.SIGNUP);
+    expect(detail.body.data.title).toBe('鉴权守卫局');
+
+    await app.prisma.activity.deleteMany({ where: { id: aid } });
+  });
+});
+
+describe('G2 手动候补转正 promote', () => {
+  it('局长 promote 候补 → SIGNED_UP（满员也转正=允许超员）；非局长 403；非候补记录 409', async () => {
+    const host = await login(`t${RUN}_g2_host`);
+    const p1 = await login(`t${RUN}_g2_p1`);
+    const p2 = await login(`t${RUN}_g2_p2`);
+    const p3 = await login(`t${RUN}_g2_p3`);
+    const w1 = await login(`t${RUN}_g2_w1`);
+
+    const created = await api('POST', '/api/activities', {
+      token: host.token,
+      body: activityPayload('promote 守卫局'),
+    });
+    const aid = created.body.data.id;
+
+    // host(局长默认报名) + p1,p2,p3 = 4 占满；w1 落候补
+    for (const p of [p1, p2, p3]) {
+      await api('POST', `/api/activities/${aid}/signups`, { token: p.token, body: {} });
+    }
+    const rw = await api('POST', `/api/activities/${aid}/signups`, { token: w1.token, body: {} });
+    expect(rw.body.data.status).toBe(SignupStatus.WAITLIST);
+    const signups = (await api('GET', `/api/activities/${aid}/signups`, { token: host.token })).body.data;
+    const w1SignupId = signups.find((s: any) => s.user.id === w1.userId).id;
+
+    // 非局长 promote → 403（checkin/routes assertHost）
+    const forbid = await api('POST', `/api/activities/${aid}/signups/${w1SignupId}/promote`, { token: p1.token });
+    expect(forbid.status).toBe(403);
+
+    // 局长 promote：service 不做容量校验——满员(4/4)时仍直接转正。
+    // 现状语义即「允许超员，局长拍板」，这里锁定占位溢出到 5/4。
+    const promoted = await api('POST', `/api/activities/${aid}/signups/${w1SignupId}/promote`, { token: host.token });
+    expect(promoted.body.code).toBe(0);
+    const w1row = promoted.body.data.find((s: any) => s.user.id === w1.userId);
+    expect(w1row.status).toBe(SignupStatus.SIGNED_UP);
+    const detail = await api('GET', `/api/activities/${aid}`, { token: host.token });
+    expect(detail.body.data.signedUpCount).toBe(5);
+    expect(detail.body.data.capacity).toBe(4);
+
+    // 对非 WAITLIST 记录（刚转正的同一条）再 promote：现状是 409「该记录不是候补状态」，非 no-op
+    const again = await api('POST', `/api/activities/${aid}/signups/${w1SignupId}/promote`, { token: host.token });
+    expect(again.status).toBe(409);
+    expect(again.body.message).toContain('不是候补状态');
+
+    await app.prisma.activity.deleteMany({ where: { id: aid } });
+  });
+});
+
+describe('G3 报名幂等与 +1 容量', () => {
+  it('已报名者再报带 +1：更新原行不新建；名额塞不下 +1 时整行降级候补（本人正选席位一并丢失，锁定现状）', async () => {
+    const host = await login(`t${RUN}_g3_host`);
+    const p1 = await login(`t${RUN}_g3_p1`);
+    const p2 = await login(`t${RUN}_g3_p2`);
+    const p3 = await login(`t${RUN}_g3_p3`);
+
+    const created = await api('POST', '/api/activities', {
+      token: host.token,
+      body: activityPayload('+1 容量局', { capacity: 6 }),
+    });
+    const aid = created.body.data.id;
+
+    // p1 先单人报名，再重复 POST 带 +1（名额足够）：状态仍正选、plusOne 更新
+    await api('POST', `/api/activities/${aid}/signups`, { token: p1.token, body: {} });
+    const again = await api('POST', `/api/activities/${aid}/signups`, { token: p1.token, body: { plusOne: 1 } });
+    expect(again.body.data.status).toBe(SignupStatus.SIGNED_UP);
+    expect(again.body.data.plusOne).toBe(1);
+
+    // 幂等：不新建行——p1 只有一条 signup，名单总行数 = host + p1 两行
+    let signups = (await api('GET', `/api/activities/${aid}/signups`, { token: host.token })).body.data;
+    expect(signups.filter((s: any) => s.user.id === p1.userId).length).toBe(1);
+    expect(signups.length).toBe(2);
+    // 占位口径含 +1：host(1) + p1(1+1) = 3
+    let detail = await api('GET', `/api/activities/${aid}`, { token: host.token });
+    expect(detail.body.data.signedUpCount).toBe(3);
+
+    // 填满到 6/6：p2 带 +1（占2）、p3 单人
+    await api('POST', `/api/activities/${aid}/signups`, { token: p2.token, body: { plusOne: 1 } });
+    await api('POST', `/api/activities/${aid}/signups`, { token: p3.token, body: {} });
+    detail = await api('GET', `/api/activities/${aid}`, { token: host.token });
+    expect(detail.body.data.signedUpCount).toBe(6);
+
+    // p3（已是正选）再想带 +1：occ(6) - 本人占位(1) + 需求(2) = 7 > 6 塞不下。
+    // 现状语义：不是「保住本人、+1 排队」，而是整行连人带 +1 一起降级 WAITLIST——
+    // 本人原本的正选席位也丢了（signup service 按整行重算 status），这里如实锁定。
+    const demote = await api('POST', `/api/activities/${aid}/signups`, { token: p3.token, body: { plusOne: 1 } });
+    expect(demote.body.data.status).toBe(SignupStatus.WAITLIST);
+    expect(demote.body.data.plusOne).toBe(1);
+    // 仍不新建行；占位回落为 host(1)+p1(2)+p2(2) = 5
+    signups = (await api('GET', `/api/activities/${aid}/signups`, { token: host.token })).body.data;
+    expect(signups.length).toBe(4);
+    detail = await api('GET', `/api/activities/${aid}`, { token: host.token });
+    expect(detail.body.data.signedUpCount).toBe(5);
+
+    await app.prisma.activity.deleteMany({ where: { id: aid } });
+  });
+});
+
+describe('G4 候补严格队列：队首塞不下即停，不跳位', () => {
+  it('候补1带+1（占2位）、候补2单人；释放 1 位后两人都不转正', async () => {
+    const host = await login(`t${RUN}_g4_host`);
+    const p1 = await login(`t${RUN}_g4_p1`);
+    const p2 = await login(`t${RUN}_g4_p2`);
+    const p3 = await login(`t${RUN}_g4_p3`);
+    const w1 = await login(`t${RUN}_g4_w1`);
+    const w2 = await login(`t${RUN}_g4_w2`);
+
+    const created = await api('POST', '/api/activities', {
+      token: host.token,
+      body: activityPayload('严格队列局'),
+    });
+    const aid = created.body.data.id;
+
+    // host + p1,p2,p3 = 4/4 占满
+    for (const p of [p1, p2, p3]) {
+      await api('POST', `/api/activities/${aid}/signups`, { token: p.token, body: {} });
+    }
+    // w1 带 +1 落候补（需 2 位），w2 单人随后落候补（需 1 位）
+    const rw1 = await api('POST', `/api/activities/${aid}/signups`, { token: w1.token, body: { plusOne: 1 } });
+    expect(rw1.body.data.status).toBe(SignupStatus.WAITLIST);
+    const rw2 = await api('POST', `/api/activities/${aid}/signups`, { token: w2.token, body: {} });
+    expect(rw2.body.data.status).toBe(SignupStatus.WAITLIST);
+
+    // p3 退出释放 1 位 → autofill 只看队首：w1 需要 2 位塞不下即 break，
+    // 排在后面、明明塞得下的 w2 也不转正——严格队列「不跳位」的现状语义
+    const cancel = await api('DELETE', `/api/activities/${aid}/signups/me`, { token: p3.token });
+    expect(cancel.body.code).toBe(0);
+
+    const signups = (await api('GET', `/api/activities/${aid}/signups`, { token: host.token })).body.data;
+    expect(signups.find((s: any) => s.user.id === w1.userId).status).toBe(SignupStatus.WAITLIST);
+    expect(signups.find((s: any) => s.user.id === w2.userId).status).toBe(SignupStatus.WAITLIST);
+    const detail = await api('GET', `/api/activities/${aid}`, { token: host.token });
+    expect(detail.body.data.signedUpCount).toBe(3); // 空出的 1 位保持空置
+
+    await app.prisma.activity.deleteMany({ where: { id: aid } });
+  });
+});
+
+describe('G5 开打后的状态机与 Guest/分组守卫', () => {
+  it('confirm 后再报名 409；对阵中 Guest 不可删；真人参赛者不可编辑/移除；非局长分组 403；二次 confirm 覆盖旧赛程', async () => {
+    const host = await login(`t${RUN}_g5_host`);
+    const stranger = await login(`t${RUN}_g5_out`);
+    const late = await login(`t${RUN}_g5_late`);
+
+    // 单打只需 2 人即可开打：host（局长默认报名）+ 1 名 Guest
+    const created = await api('POST', '/api/activities', {
+      token: host.token,
+      body: activityPayload('开打守卫局', { playType: PlayType.SINGLES }),
+    });
+    const aid = created.body.data.id;
+
+    // host 自助签到 + 加 Guest，凑出分组输入
+    const self = await api('POST', `/api/activities/${aid}/checkin/me`, { token: host.token, body: {} });
+    expect(self.body.data.checkedIn).toBe(true);
+    const guest = await api('POST', `/api/activities/${aid}/participants`, {
+      token: host.token,
+      body: { guestName: '守卫小临', level: SkillLevel.L3 },
+    });
+    expect(guest.body.data.isGuest).toBe(true);
+
+    const parts = (await api('GET', `/api/activities/${aid}/participants`, { token: host.token })).body.data;
+    expect(parts.length).toBe(2);
+    const realPart = parts.find((p: any) => !p.isGuest);
+    const guestPart = parts.find((p: any) => p.isGuest);
+
+    const previewBody = {
+      participantIds: parts.map((p: any) => p.id),
+      playType: PlayType.SINGLES,
+      mode: GroupMode.BALANCED,
+      courtCount: 1,
+      rounds: 1,
+      seed: 7,
+    };
+
+    // 非局长 preview → 403（grouping/routes assertHost，先于 body 校验）
+    const badPreview = await api('POST', `/api/activities/${aid}/grouping/preview`, {
+      token: stranger.token,
+      body: previewBody,
+    });
+    expect(badPreview.status).toBe(403);
+
+    const preview = await api('POST', `/api/activities/${aid}/grouping/preview`, { token: host.token, body: previewBody });
+    expect(preview.body.code).toBe(0);
+    const schedule = preview.body.data;
+    expect(schedule.rounds.length).toBe(1);
+
+    // 非局长 confirm → 403（confirmGrouping 服务层校验 hostId）
+    const badConfirm = await api('POST', `/api/activities/${aid}/grouping/confirm`, {
+      token: stranger.token,
+      body: { schedule },
+    });
+    expect(badConfirm.status).toBe(403);
+
+    const confirm = await api('POST', `/api/activities/${aid}/grouping/confirm`, { token: host.token, body: { schedule } });
+    expect(confirm.body.code).toBe(0);
+    expect(confirm.body.data.status).toBe(ActivityStatus.ONGOING);
+    const firstMatchId = confirm.body.data.rounds[0].matches[0].id;
+
+    // 状态机：ONGOING 后再报名 → 409（signup service「活动已不在报名中」）
+    const lateSignup = await api('POST', `/api/activities/${aid}/signups`, { token: late.token, body: {} });
+    expect(lateSignup.status).toBe(409);
+
+    // Guest 守卫：已进对阵（有 matchPlayers）的 Guest 不允许删，避免破坏看板
+    const delGuest = await api('DELETE', `/api/activities/${aid}/participants/${guestPart.id}`, { token: host.token });
+    expect(delGuest.status).toBe(409);
+    expect(delGuest.body.message).toContain('已进入对阵');
+
+    // 真人参赛者：participants 编辑/移除接口只服务临时球友，对真人一律 409
+    const patchReal = await api('PATCH', `/api/activities/${aid}/participants/${realPart.id}`, {
+      token: host.token,
+      body: { displayName: '改真人' },
+    });
+    expect(patchReal.status).toBe(409);
+    expect(patchReal.body.message).toContain('只能编辑临时球友');
+    const delReal = await api('DELETE', `/api/activities/${aid}/participants/${realPart.id}`, { token: host.token });
+    expect(delReal.status).toBe(409);
+    expect(delReal.body.message).toContain('只能移除临时球友');
+
+    // 二次 confirm：现状是「覆盖旧赛程」而非 409——旧 Round/Match 级联删除后重建，
+    // 活动保持 ONGOING，match id 必然更换（自增主键重建），如实锁定覆盖语义
+    const reconfirm = await api('POST', `/api/activities/${aid}/grouping/confirm`, { token: host.token, body: { schedule } });
+    expect(reconfirm.body.code).toBe(0);
+    expect(reconfirm.body.data.status).toBe(ActivityStatus.ONGOING);
+    expect(reconfirm.body.data.rounds.length).toBe(1);
+    expect(reconfirm.body.data.rounds[0].matches[0].id).not.toBe(firstMatchId);
+
+    await app.prisma.activity.deleteMany({ where: { id: aid } });
+  });
+});
