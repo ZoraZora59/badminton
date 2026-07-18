@@ -1,6 +1,8 @@
 # dependencies
 node_modules/
 .pnpm-store/
+# lockfile 未入库（CI 已去 frozen-lockfile，见 464211f）
+pnpm-lock.yaml
 
 # build output
 dist/
