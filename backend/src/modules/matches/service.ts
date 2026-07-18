@@ -25,13 +25,32 @@ export async function getBoard(prisma: PrismaClient, activityId: number): Promis
   };
 }
 
-async function loadMatchForHost(prisma: PrismaClient, matchId: number, hostId: number) {
+async function loadMatch(prisma: PrismaClient, matchId: number) {
   const match = await prisma.match.findUnique({
     where: { id: matchId },
     include: { ...matchInclude, round: { include: { activity: true } } },
   });
   if (!match) throw Errors.notFound('对局不存在');
-  if (match.round.activity.hostId !== hostId) throw Errors.forbidden('仅局长可计分');
+  return match;
+}
+
+/** 换人等排兵操作仍仅局长可做 */
+async function loadMatchForHost(prisma: PrismaClient, matchId: number, hostId: number) {
+  const match = await loadMatch(prisma, matchId);
+  if (match.round.activity.hostId !== hostId) throw Errors.forbidden('仅局长可操作');
+  return match;
+}
+
+/** 计分放开给全场：局长或本局任一参赛球友（含轮空者）都可录分/改判 */
+async function loadMatchForScorer(prisma: PrismaClient, matchId: number, userId: number) {
+  const match = await loadMatch(prisma, matchId);
+  if (match.round.activity.hostId !== userId) {
+    const participant = await prisma.participant.findFirst({
+      where: { activityId: match.round.activityId, userId },
+      select: { id: true },
+    });
+    if (!participant) throw Errors.forbidden('仅局长或本局球友可计分');
+  }
   return match;
 }
 
@@ -39,11 +58,11 @@ async function loadMatchForHost(prisma: PrismaClient, matchId: number, hostId: n
 export async function scoreMatch(
   prisma: PrismaClient,
   matchId: number,
-  hostId: number,
+  userId: number,
   scoreA: number,
   scoreB: number,
 ): Promise<MatchVM> {
-  const match = await loadMatchForHost(prisma, matchId, hostId);
+  const match = await loadMatchForScorer(prisma, matchId, userId);
   if (scoreA === scoreB) throw Errors.badRequest('比分不能相同，需分出胜负');
   const winner = scoreA > scoreB ? Team.A : Team.B;
   await prisma.match.update({

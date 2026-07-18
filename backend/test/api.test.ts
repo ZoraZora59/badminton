@@ -237,8 +237,12 @@ describe('E2–E8 完整用户故事走查', () => {
     const tie = await api('POST', `/api/matches/${m1.id}/score`, { token: host.token, body: { scoreA: 20, scoreB: 20 } });
     expect(tie.status).toBe(400);
 
-    // 非局长不能计分
-    const badScore = await api('POST', `/api/matches/${m1.id}/score`, { token: p1.token, body: { scoreA: 21, scoreB: 10 } });
+    // 计分权限放开：参与本局的球友（非局长）也能计分/改判，免得局长忙不过来
+    const peerScore = await api('PATCH', `/api/matches/${m1.id}/score`, { token: p1.token, body: { scoreA: 17, scoreB: 21 } });
+    expect(peerScore.body.data.winner).toBe(Team.B);
+
+    // 未参与本局的用户（p5 请假未签到，无参赛者身份）仍不能计分
+    const badScore = await api('POST', `/api/matches/${m1.id}/score`, { token: p5.token, body: { scoreA: 21, scoreB: 10 } });
     expect(badScore.status).toBe(403);
 
     // 换人：把第2轮的轮空者与场上某人对调（拖拽微调）
@@ -247,6 +251,13 @@ describe('E2–E8 完整用户故事走查', () => {
     const onCourt = r2.matches[0].teamA.participants[0].id;
     const byeId = r2.byeParticipantIds[0];
     const r2match = r2.matches[0].id;
+
+    // 换人属于排兵，仍仅局长可操作（计分放开不影响它）
+    const badSwap = await api('POST', `/api/matches/${r2match}/swap`, {
+      token: p1.token,
+      body: { participantA: onCourt, participantB: byeId },
+    });
+    expect(badSwap.status).toBe(403);
     const swap = await api('POST', `/api/matches/${r2match}/swap`, {
       token: host.token,
       body: { participantA: onCourt, participantB: byeId },

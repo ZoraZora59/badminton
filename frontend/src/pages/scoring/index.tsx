@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { View, Text, Input } from '@tarojs/components';
 import Taro, { useRouter, useDidShow } from '@tarojs/taro';
-import { type MatchVM, type ParticipantVM } from '@badminton/shared';
+import { MatchStatus, type MatchVM, type ParticipantVM } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
 import { toastError } from '../../services/api';
+import { clearScoreDraft, loadScoreDraft, saveScoreDraft } from '../../services/scoreDraft';
 import { Avatar, PageFrame } from '../../components';
 import './index.scss';
 
@@ -24,6 +25,7 @@ export default function Scoring() {
   const [scoreB, setScoreB] = useState(0);
   const [manual, setManual] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const restoreToastShown = useRef(false);
 
   const load = useCallback(async () => {
     try {
@@ -39,8 +41,25 @@ export default function Scoring() {
       }
       setMatch(found);
       if (found) {
-        setScoreA(found.scoreA ?? 0);
-        setScoreB(found.scoreB ?? 0);
+        const finished = found.status === MatchStatus.FINISHED;
+        const draft = loadScoreDraft(found.id);
+        if (!finished && draft) {
+          // 锁屏/被杀进程/onShow 重刷后，优先恢复本机未提交的比分
+          setScoreA(draft.scoreA);
+          setScoreB(draft.scoreB);
+          if (!restoreToastShown.current && (draft.scoreA !== 0 || draft.scoreB !== 0)) {
+            restoreToastShown.current = true;
+            Taro.showToast({ title: '已恢复未提交的比分', icon: 'none' });
+          }
+        } else {
+          if (finished && draft) {
+            // 现在全场球友都能计分：本机还有草稿但别人已确认，以已确认比分为准
+            clearScoreDraft(found.id);
+            Taro.showToast({ title: '该局比分已有人确认', icon: 'none' });
+          }
+          setScoreA(found.scoreA ?? 0);
+          setScoreB(found.scoreB ?? 0);
+        }
       }
     } catch (e) {
       toastError(e);
@@ -53,11 +72,21 @@ export default function Scoring() {
     load();
   });
 
+  // 比分一变就落本地草稿（已结束对局的改判不落，避免恢复时盖过最终比分）
+  const applyScore = useCallback(
+    (a: number, b: number) => {
+      setScoreA(a);
+      setScoreB(b);
+      if (match && match.status !== MatchStatus.FINISHED) saveScoreDraft(match.id, a, b);
+    },
+    [match],
+  );
+
   const onManualInput = (side: 'A' | 'B') => (e: { detail: { value: string } }) => {
     const raw = e.detail.value.replace(/[^\d]/g, '');
     const n = raw === '' ? 0 : Math.min(99, Number(raw));
-    if (side === 'A') setScoreA(n);
-    else setScoreB(n);
+    if (side === 'A') applyScore(n, scoreB);
+    else applyScore(scoreA, n);
   };
 
   const tie = scoreA === scoreB;
@@ -73,6 +102,7 @@ export default function Scoring() {
       try {
         if (kind === 'score') await api.score(match.id as number, scoreA, scoreB);
         else await api.rejudge(match.id as number, scoreA, scoreB);
+        clearScoreDraft(match.id);
         Taro.showToast({ title: kind === 'score' ? '已确认胜负' : '已改判', icon: 'success' });
         setTimeout(() => Taro.navigateBack(), 600);
       } catch (e) {
@@ -149,18 +179,18 @@ export default function Scoring() {
       {/* 大按钮 +1 / -1 */}
       <View className="sc__pads">
         <View className="sc__pad">
-          <View className="sc__plus sc__plus--a" onClick={() => setScoreA((v) => Math.min(99, v + 1))}>
+          <View className="sc__plus sc__plus--a" onClick={() => applyScore(Math.min(99, scoreA + 1), scoreB)}>
             +1
           </View>
-          <View className="sc__minus" onClick={() => setScoreA((v) => Math.max(0, v - 1))}>
+          <View className="sc__minus" onClick={() => applyScore(Math.max(0, scoreA - 1), scoreB)}>
             −1
           </View>
         </View>
         <View className="sc__pad">
-          <View className="sc__plus sc__plus--b" onClick={() => setScoreB((v) => Math.min(99, v + 1))}>
+          <View className="sc__plus sc__plus--b" onClick={() => applyScore(scoreA, Math.min(99, scoreB + 1))}>
             +1
           </View>
-          <View className="sc__minus" onClick={() => setScoreB((v) => Math.max(0, v - 1))}>
+          <View className="sc__minus" onClick={() => applyScore(scoreA, Math.max(0, scoreB - 1))}>
             −1
           </View>
         </View>

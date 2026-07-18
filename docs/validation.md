@@ -62,9 +62,13 @@
 |---|---|---|---|
 | US-6.1 看板 + 轮空提示 | `GET /activities/:id/board` | api.test 确认后看板 totalRounds；`board` 页轮次切换+轮空 | ✅ |
 | US-6.2 大字比分+大按钮计分定胜负 | `POST /matches/:id/score` | api.test 21:15→winner A、FINISHED；`scoring` 页 | ✅ |
-| US-6.3 改判 | `PATCH /matches/:id/score` | api.test 改判翻盘；平局被拒(400) | ✅ |
+| US-6.3 改判 | `PATCH /matches/:id/score` | api.test 改判翻盘；平局被拒(400)；参与球友改判生效 | ✅ |
 | US-6.4 我今天打几场/下一场 | board（含每轮对阵） | `board` 可见各轮；未专门高亮「我的下一场」 | 🟡 |
 | US-6.5 对局计时（可选） | — | v1 未做 | ⚪ |
+
+> 2026-07-18 计分体验加固：
+> ① 计分/改判权限从「仅局长」放开为「局长或本局任一参赛球友（含轮空者）」，避免局长忙不过来；非参与者仍 403，换人/结束活动仍仅局长（api.test 覆盖：参与球友 PATCH 改判生效、请假者计分 403、非局长换人 403）。
+> ② `scoring` 页未提交的比分实时写入本地草稿（`frontend/src/services/scoreDraft.ts`，按 matchId 存、24 小时过期）：锁屏、小程序被系统回收、onShow 重刷都会自动恢复并提示「已恢复未提交的比分」；提交成功即清草稿；若他人已抢先确认，以服务端比分为准并提示「该局比分已有人确认」。前端 `test/scoreDraft.test.ts` 5 例覆盖恢复/多局隔离/清除/过期清理/脏数据兜底。
 
 ## E7 结算与战报
 | 故事 | 接口 | 测试/页面 | 状态 |
