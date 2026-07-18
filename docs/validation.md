@@ -60,10 +60,10 @@
 ## E6 对阵看板与计分
 | 故事 | 接口 | 测试/页面 | 状态 |
 |---|---|---|---|
-| US-6.1 看板 + 轮空提示 | `GET /activities/:id/board` | api.test 确认后看板 totalRounds；`board` 页轮次切换+轮空 | ✅ |
+| US-6.1 看板 + 轮空提示 | `GET /activities/:id/board` | api.test 确认后看板 totalRounds；`board` 页轮次切换+轮空；当前轮下方新增「完整赛程」总览（每轮各场地对阵/比分/轮空一屏可扫，点任意轮切换查看），开赛前不再一屏只有一轮 | ✅ |
 | US-6.2 大字比分+大按钮计分定胜负 | `POST /matches/:id/score` | api.test 21:15→winner A、FINISHED；`scoring` 页 | ✅ |
 | US-6.3 改判 | `PATCH /matches/:id/score` | api.test 改判翻盘；平局被拒(400)；参与球友改判生效 | ✅ |
-| US-6.4 我今天打几场/下一场 | board（含每轮对阵） | `board` 可见各轮；未专门高亮「我的下一场」 | 🟡 |
+| US-6.4 我今天打几场/下一场 | board（含每轮对阵） | `board`「完整赛程」总览可一屏扫完各轮对阵与轮空；仍未专门高亮「我的下一场」 | 🟡 |
 | US-6.5 对局计时（可选） | — | v1 未做 | ⚪ |
 
 > 2026-07-18 计分体验加固：

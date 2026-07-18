@@ -212,6 +212,60 @@ export default function Board() {
           </View>
         ) : null}
 
+        {/* 完整赛程总览：开赛前一屏不只有当前轮，球友可直接看每轮跟谁打、在哪片、哪轮休息 */}
+        {board.rounds.length > 1 ? (
+          <View className="sched">
+            <View className="sched__head">
+              <Text className="sched__title">完整赛程</Text>
+              <Text className="sched__hint">点任意轮可切换查看</Text>
+            </View>
+            {board.rounds.map((r, i) => {
+              const allDone = r.matches.length > 0 && r.matches.every((m) => m.status === MatchStatus.FINISHED);
+              const anyLive = r.matches.some((m) => m.status === MatchStatus.ONGOING);
+              const viewing = i === roundIdx;
+              const byes = r.byeParticipantIds.map((pid) => nameMap.get(pid)?.displayName ?? '球友');
+              return (
+                <View
+                  key={r.index}
+                  className={`sched__round ${viewing ? 'sched__round--on' : ''}`}
+                  onClick={() => {
+                    setTouched(true);
+                    setRoundIdx(i);
+                  }}
+                >
+                  <View className="sched__round-head">
+                    <Text className="sched__round-name">第 {i + 1} 轮</Text>
+                    {allDone ? <Tag text="已打完" tone="muted" /> : anyLive ? <Tag text="● 进行中" tone="success" /> : null}
+                  </View>
+                  {r.matches.map((m) => {
+                    const done = m.status === MatchStatus.FINISHED;
+                    return (
+                      <View key={String(m.id)} className="sched__match">
+                        <Text className="sched__court num">场{m.courtNo}</Text>
+                        <Text className="sched__names">
+                          {m.teamA.participants.map((p) => p.displayName).join('/')}
+                          <Text className="sched__vs"> vs </Text>
+                          {m.teamB.participants.map((p) => p.displayName).join('/')}
+                        </Text>
+                        {done ? (
+                          <Text className="sched__score num">
+                            <Text className={m.winner === Team.A ? 'sched__score--win' : ''}>{m.scoreA ?? 0}</Text>
+                            <Text className="sched__score-colon">:</Text>
+                            <Text className={m.winner === Team.B ? 'sched__score--win' : ''}>{m.scoreB ?? 0}</Text>
+                          </Text>
+                        ) : m.status === MatchStatus.ONGOING ? (
+                          <Text className="sched__live">●</Text>
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                  {byes.length > 0 ? <Text className="sched__bye">轮空 · {byes.join('、')}</Text> : null}
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+
         <View className="board__pad" />
         </View>
       </View>

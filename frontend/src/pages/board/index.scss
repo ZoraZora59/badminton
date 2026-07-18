@@ -171,6 +171,105 @@
   }
 }
 
+// 完整赛程总览
+.sched {
+  margin-top: 16px;
+
+  &__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 0 2px 10px;
+  }
+  &__title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--c-text);
+  }
+  &__hint {
+    font-size: 10px;
+    color: var(--c-text-4);
+  }
+
+  &__round {
+    background: #fff;
+    border-radius: var(--radius-card);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow-card);
+    border: 1.5px solid transparent;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    &--on {
+      border-color: #cfe3d6;
+    }
+  }
+  &__round-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  &__round-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--c-text);
+  }
+
+  &__match {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  &__court {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--c-primary-dark);
+    background: #eef6f0;
+    padding: 2px 7px;
+    border-radius: 7px;
+  }
+  &__names {
+    flex: 1;
+    min-width: 0;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--c-text-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  &__vs {
+    font-size: 10px;
+    font-weight: 600;
+    color: #c0c8c3;
+  }
+  &__score {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--c-text-4);
+
+    &--win {
+      color: var(--c-primary);
+    }
+  }
+  &__score-colon {
+    color: #c0c8c3;
+  }
+  &__live {
+    flex-shrink: 0;
+    font-size: 9px;
+    color: var(--c-primary);
+  }
+  &__bye {
+    font-size: 10px;
+    color: var(--c-text-4);
+  }
+}
+
 // 轮空提示
 .bye {
   display: flex;
