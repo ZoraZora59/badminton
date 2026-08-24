@@ -156,6 +156,7 @@ pnpm dev:frontend
   ```
 
   - ⚠️ **若本次改了 `backend/prisma/schema.prisma`（加/改列、表）**：上面的标准流程**不迁库**。必须**先**按 [`docs/deploy.md`](docs/deploy.md)「数据库结构变更」在服务器上迁 prod 库（`ssh aliyun`，用 `prisma db push --env=prod` 或服务器上的 mysql 客户端），**再**部署代码。本地 `db:push` 只改 dev 库、改不到线上；先上代码后迁库会让新查询撞上缺列、打挂线上。库口令只在服务器 `config.prod.yml`，勿写入任何入库文件。
+  - 🏛️ **服务器一切由宝塔面板统一管理（红线）**：进程是面板 Node 项目（PM2 模式，`pm2 restart badminton-backend` 与其兼容、可照常用）、站点 vhost 与证书（`*.zorazora.cn` 泛域名、面板自动续签）均由面板维护。**不要**在服务器上手工 `pm2 start` 新进程、手写 vhost、或用 acme.sh 单独签证书——那是影子服务，详见 [`docs/deploy.md`](docs/deploy.md)「宝塔面板统一管理」。
 
 - **前端代码（`frontend/`）**：构建并上传小程序「开发版」（版本号自动递增）
 

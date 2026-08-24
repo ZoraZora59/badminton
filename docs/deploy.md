@@ -3,10 +3,10 @@
 ## 拓扑
 
 ```
-微信小程序  ──https──▶  badminton.zorazora.cn (nginx 443, Let's Encrypt)
-                              │  location /api/  → proxy_pass
+微信小程序  ──https──▶  badminton.zorazora.cn (nginx 443, 宝塔站点 + *.zorazora.cn 泛域名证书)
+                              │  location ^~ /api/  → proxy_pass（宝塔 extension 配置）
                               ▼
-                    pm2: badminton-backend (127.0.0.1:3010, Fastify, env=prod)
+              宝塔Node项目(PM2模式): badminton-backend (127.0.0.1:3010, Fastify, env=prod)
                               │
                               ▼
                     MySQL  127.0.0.1:3204  库 badminton（线上库·内网）
@@ -14,10 +14,17 @@
 
 > 库分离：**本地/dev 用 `badminton_dev`**（user badminton_dev，公网 www.zorazora.cn:3204）；**线上/prod 用 `badminton`**（user badminton，内网 127.0.0.1:3204）。两套配置文件各自指向，互不影响。
 
+## 宝塔面板统一管理（2026-08-24 迁移完成 · 红线）
+
+服务器上所有项目必须由宝塔面板统一管理，**不允许影子服务**（自起进程自维护、手写 vhost、面板外的证书续期）。本项目三层均已面板化：
+
+- **进程**：面板「网站 → Node项目」登记 `badminton-backend`（PM2 模式，启动文件 `dist/server.js`、参数 `--env=prod`、运行用户 root、内存上限 300M、开机自启）。底层仍是 root 的 pm2，`pm2 ls`/`pm2 restart badminton-backend` 照常可用；面板里也可启停。
+- **站点**：面板「网站 → HTML项目」登记 `badminton.zorazora.cn`（根目录 `/www/wwwroot/badminton/public`），主配置 `/www/server/panel/vhost/nginx/html_badminton.zorazora.cn.conf` 由面板生成；`/api` 反代在 `/www/server/panel/vhost/nginx/extension/badminton.zorazora.cn/api_proxy.conf`（面板 include 体系，面板重新生成主配置不会丢）。已开强制 HTTPS（80→301）。
+- **证书**：复用面板统一维护的 `*.zorazora.cn` 泛域名 Let's Encrypt 证书（面板自动续签，与同机其他站点共用一张）。**acme.sh 已整体退役**（域名条目与 crontab 均已移除），不要再单独为本域名签证书。
+- 原手工 vhost 备份在服务器 `/root/badminton-migration-backup/`。
+
 - 服务器：`ssh aliyun`（root@59.110.232.243，Alibaba Cloud Linux 8，宝塔托管）。
 - 后端代码：`/www/wwwroot/badminton/`（`shared` + `backend` 两个 workspace；前端不部署在服务器，走小程序上传）。
-- 进程：pm2 `badminton-backend`（`dist/server.js --env=prod`，端口 3010，仅监听 127.0.0.1，由 nginx 反代）。
-- 站点：nginx vhost `/www/server/panel/vhost/nginx/badminton.zorazora.cn.conf`，证书 `/www/server/panel/vhost/cert/badminton.zorazora.cn/`（acme.sh 自动续期）。
 - 配置：`/www/wwwroot/badminton/backend/config/config.prod.yml`（DB 内网 127.0.0.1:3204、`auth.mode=wechat` 真实 appId/secret、强 JWT secret）。**不入库**。
 
 ## 已完成的线上验证
@@ -35,6 +42,8 @@
 3. `config/config.prod.yml`（内网 DB + wechat 鉴权）；`ecosystem.config.js`；`pm2 start && pm2 save`。
 4. nginx vhost（80→443 跳转 + `/api` 反代 + `/.well-known` 供签发）；acme.sh 签发 Let's Encrypt 并安装证书、`nginx -s reload`。
 
+> 2026-08-24 起 3、4 两步的产物已迁入宝塔面板管理（见上文「宝塔面板统一管理」）：进程改为面板 Node 项目托管（`ecosystem.config.js` 留档不再是启动真源）、手工 vhost 与 acme.sh 已退役。
+
 ## 更新重新部署（改完代码后）
 
 ```bash
@@ -46,6 +55,8 @@ ssh aliyun 'cd /www/wwwroot/badminton && pnpm install \
   && cd backend && pnpm exec prisma generate && pnpm build \
   && pm2 restart badminton-backend'
 ```
+
+> `pm2 restart badminton-backend` 与宝塔面板托管兼容（面板 PM2 模式底层就是 root 的 pm2，restart 保留 `--env=prod` 参数），已实测。也可在面板「网站 → Node项目」里重启。**不要**再 `pm2 delete` 后手工 `pm2 start` 新配置——那会绕开面板登记，重新制造影子服务。
 
 ## 数据库结构变更（schema 迁移 · 必读）
 
