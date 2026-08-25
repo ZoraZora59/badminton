@@ -837,3 +837,73 @@ describe('G7 僵尸局惰性收尾：打完没人点「结束活动」也会自�
     await app.prisma.activity.deleteMany({ where: { id: { in: ids } } });
   });
 });
+
+describe('G8 场地真实编号：局长填「5、6、12 号场」，看板不再只会显示 1/2/3', () => {
+  it('建局落库并回读一致；不填为 null；PATCH 可改可清空；PATCH 不传该字段时原值不被抹掉', async () => {
+    const host = await login(`t${RUN}_g8_host`);
+    const ids: number[] = [];
+
+    // 建局带真实编号 → 回读一致（原始串原样出，切分交给展示层）
+    const created = await api('POST', '/api/activities', {
+      token: host.token,
+      body: activityPayload('真实场地编号局', { courtCount: 3, courtLabels: '5,6,12' }),
+    });
+    expect(created.body.code).toBe(0);
+    const aid = created.body.data.id;
+    ids.push(aid);
+    expect(created.body.data.courtLabels).toBe('5,6,12');
+    // 不只看返回值：库里真的写进去了
+    expect((await app.prisma.activity.findUnique({ where: { id: aid } }))!.courtLabels).toBe('5,6,12');
+    // 详情接口口径一致
+    const detail = await api('GET', `/api/activities/${aid}`, { token: host.token });
+    expect(detail.body.data.courtLabels).toBe('5,6,12');
+
+    // 不填 → null（不是空串）：前端只需判空，不用再区分两种「没填」
+    const plain = await api('POST', '/api/activities', {
+      token: host.token,
+      body: activityPayload('没填编号局'),
+    });
+    const plainId = plain.body.data.id;
+    ids.push(plainId);
+    expect(plain.body.data.courtLabels).toBeNull();
+
+    // 空串也归一成 null，避免库里同时存在 '' 和 null 两种「没填」
+    const blank = await api('POST', '/api/activities', {
+      token: host.token,
+      body: activityPayload('空串编号局', { courtLabels: '   ' }),
+    });
+    const blankId = blank.body.data.id;
+    ids.push(blankId);
+    expect(blank.body.data.courtLabels).toBeNull();
+
+    // PATCH 改成别的值能生效（换馆了/换片了）
+    const patched = await api('PATCH', `/api/activities/${aid}`, {
+      token: host.token,
+      body: { courtLabels: 'A区3号,A区4号' },
+    });
+    expect(patched.body.code).toBe(0);
+    expect(patched.body.data.courtLabels).toBe('A区3号,A区4号');
+
+    // 关键：PATCH 不传该字段 = 不改。编辑页只提交自己表单里的字段，
+    // 一旦这里写成 `courtLabels: req.courtLabels ?? null`，局长改个标题就把编号清了，
+    // 而且要等到开打那一刻看板变回 1/2/3 才会发现。
+    const otherEdit = await api('PATCH', `/api/activities/${aid}`, {
+      token: host.token,
+      body: { title: '只改标题' },
+    });
+    expect(otherEdit.body.code).toBe(0);
+    expect(otherEdit.body.data.title).toBe('只改标题');
+    expect(otherEdit.body.data.courtLabels).toBe('A区3号,A区4号');
+    expect((await app.prisma.activity.findUnique({ where: { id: aid } }))!.courtLabels).toBe('A区3号,A区4号');
+
+    // 显式传 null = 清空，回落成序号显示
+    const cleared = await api('PATCH', `/api/activities/${aid}`, {
+      token: host.token,
+      body: { courtLabels: null },
+    });
+    expect(cleared.body.data.courtLabels).toBeNull();
+    expect((await app.prisma.activity.findUnique({ where: { id: aid } }))!.courtLabels).toBeNull();
+
+    await app.prisma.activity.deleteMany({ where: { id: { in: ids } } });
+  });
+});

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { View, Text, Input, Textarea, Picker, Switch } from '@tarojs/components';
 import Taro, { useRouter, useDidShow } from '@tarojs/taro';
-import { PlayType, type ActivityVM, type CreateActivityReq } from '@badminton/shared';
+import { PlayType, parseCourtLabels, type ActivityVM, type CreateActivityReq } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
 import { toastError } from '../../services/api';
@@ -65,6 +65,8 @@ export default function Create() {
   const [ddlTime, setDdlTime] = useState('12:00');
   const [venue, setVenue] = useState('');
   const [courtCount, setCourtCount] = useState(3);
+  // 球馆给的真实场地编号（如「5、6、12」）。留空就按 1、2、3 显示，不影响任何分组逻辑
+  const [courtLabels, setCourtLabels] = useState('');
   const [capacity, setCapacity] = useState(16);
   const [playType, setPlayType] = useState<PlayType>(PlayType.DOUBLES);
   const [mixedDoubles, setMixedDoubles] = useState(false);
@@ -118,6 +120,7 @@ export default function Create() {
         }
         setVenue(a.venue);
         setCourtCount(a.courtCount);
+        setCourtLabels(a.courtLabels ?? '');
         setCapacity(a.capacity);
         setPlayType(a.playType);
         setMixedDoubles(a.mixedDoubles ?? false);
@@ -146,13 +149,34 @@ export default function Create() {
     Math.min(max, Math.max(min, v + delta));
 
   /**
-   * 沿用上次：只带「每周都一样」的项（场馆/场地数/人数上限/玩法/混双/备注）。
+   * 场地编号的轻提示：只说清楚「没标到的那几片会按序号显示」，不拦提交。
+   * 局长完全可能只标其中几片（固定两片 + 一片每周不一样），强行要求填满就是给自己添堵。
+   */
+  const courtLabelHint = useMemo(() => {
+    const labels = parseCourtLabels(courtLabels);
+    if (labels.length === 0) return '';
+    if (labels.length < courtCount) {
+      const rest = courtCount - labels.length;
+      const nos = Array.from({ length: rest }, (_, i) => labels.length + i + 1);
+      const shown = nos.length <= 4 ? nos.join('、') : `${nos.slice(0, 4).join('、')}…`;
+      return `已标 ${labels.length} 片，其余 ${rest} 片按序号 ${shown} 显示`;
+    }
+    if (labels.length > courtCount) {
+      return `填了 ${labels.length} 个编号，场地数只有 ${courtCount} 片，多出来的用不上`;
+    }
+    return '';
+  }, [courtLabels, courtCount]);
+
+  /**
+   * 沿用上次：只带「每周都一样」的项（场馆/场地数/场地编号/人数上限/玩法/混双/备注）。
    * 日期时间不带——上一场是过去时间，带过来是错的，保持「下一个周六 19:00」的默认。
+   * 场地编号跟着场馆走：周常局多半还是那几片，不带过来等于每周重打一遍。
    */
   const reuseLast = () => {
     if (!lastAct) return;
     setVenue(lastAct.venue);
     setCourtCount(lastAct.courtCount);
+    setCourtLabels(lastAct.courtLabels ?? '');
     setCapacity(lastAct.capacity);
     setPlayType(lastAct.playType);
     setMixedDoubles(lastAct.playType === PlayType.DOUBLES && lastAct.mixedDoubles);
@@ -192,6 +216,8 @@ export default function Create() {
         endAt: endIso,
         venue: venue.trim(),
         courtCount,
+        // 空串统一送 null：库里只留「有编号」和「没编号」两种状态，展示层不用再判空串
+        courtLabels: courtLabels.trim() || null,
         capacity,
         signupDeadline: ddlIso,
         playType,
@@ -382,6 +408,24 @@ export default function Create() {
               </View>
             </View>
           </View>
+        </View>
+
+        {/* 场地编号（选填）：球馆给的是「5、6、12 号场」，不填就按 1、2、3 显示 */}
+        <View className="field">
+          <Text className="field__label">场地编号（选填）</Text>
+          <View className="field__box">
+            <Input
+              className="field__input"
+              value={courtLabels}
+              placeholder="5、6、12（不填就按 1、2、3 显示）"
+              placeholderClass="field__ph"
+              maxlength={80}
+              onInput={(e) => setCourtLabels(e.detail.value)}
+            />
+          </View>
+          {courtLabelHint ? (
+            <Text className="field__note field__note--tip">{courtLabelHint}</Text>
+          ) : null}
         </View>
 
         {/* 玩法 */}

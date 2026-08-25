@@ -2,10 +2,22 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { ok } from '../../lib/response';
 import { currentUserId } from '../../plugins/auth';
-import { finishActivity, getBoard, getSummary, scoreMatch, swapPlayers } from './service';
+import {
+  finishActivity,
+  getBoard,
+  getSummary,
+  rejoinParticipant,
+  scoreMatch,
+  swapPlayers,
+  withdrawParticipant,
+} from './service';
 
 const ActIdParam = z.object({ id: z.coerce.number().int().positive() });
 const MatchIdParam = z.object({ id: z.coerce.number().int().positive() });
+const RosterParam = z.object({
+  id: z.coerce.number().int().positive(),
+  pid: z.coerce.number().int().positive(),
+});
 const ScoreBody = z.object({ scoreA: z.number().int().min(0).max(99), scoreB: z.number().int().min(0).max(99) });
 const SwapBody = z.object({ participantA: z.number().int().positive(), participantB: z.number().int().positive() });
 
@@ -52,5 +64,19 @@ export default async function matchRoutes(app: FastifyInstance) {
     const { id } = MatchIdParam.parse(req.params);
     const { participantA, participantB } = SwapBody.parse(req.body);
     return ok(await swapPlayers(app.prisma, id, uid, participantA, participantB));
+  });
+
+  // 提前离场：从后续没打的对局里摘掉，已打完的战绩不动
+  app.post('/activities/:id/participants/:pid/withdraw', { preHandler: app.authenticate }, async (req) => {
+    const uid = currentUserId(req);
+    const { id, pid } = RosterParam.parse(req.params);
+    return ok(await withdrawParticipant(app.prisma, id, pid, uid));
+  });
+
+  // 中途归队：放进后续轮次的轮空名单，局长再用换人把他换上场
+  app.post('/activities/:id/participants/:pid/rejoin', { preHandler: app.authenticate }, async (req) => {
+    const uid = currentUserId(req);
+    const { id, pid } = RosterParam.parse(req.params);
+    return ok(await rejoinParticipant(app.prisma, id, pid, uid));
   });
 }

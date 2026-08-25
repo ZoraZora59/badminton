@@ -44,6 +44,19 @@ async function autoFinishStale(prisma: PrismaClient, activities: ActivityWithHos
   return activities.map((a) => (staleSet.has(a.id) ? { ...a, status: ActivityStatus.FINISHED } : a));
 }
 
+/**
+ * 场地编号入库前的归一：只做去空白，空串/纯空白一律落成 null。
+ *
+ * 不在这里切分或校验格式——球馆的编号可能是「A区3号」这种非数字，强制格式只会挡住真实用法；
+ * 解析交给展示层的 `parseCourtLabels`。归一 null 的意义是让「没填」和「填了又清空」落到同一个值，
+ * 前端拿到的永远是 `null | 非空串`，不用再区分空串。
+ */
+function normalizeCourtLabels(raw: string | null | undefined): string | null {
+  if (raw == null) return null;
+  const trimmed = raw.trim();
+  return trimmed ? trimmed : null;
+}
+
 /** 统计报名占位（含 +1）/候补/请假人数 + 头像墙预览 */
 export async function getCounts(prisma: PrismaClient, activityId: number): Promise<ActivityCounts> {
   const signups = await prisma.signup.findMany({
@@ -78,6 +91,7 @@ export async function createActivity(
       endAt: req.endAt ? new Date(req.endAt) : null,
       venue: req.venue,
       courtCount: req.courtCount,
+      courtLabels: normalizeCourtLabels(req.courtLabels),
       capacity: req.capacity,
       signupDeadline: req.signupDeadline ? new Date(req.signupDeadline) : null,
       playType: req.playType,
@@ -165,6 +179,9 @@ export async function updateActivity(
       ...(req.endAt !== undefined ? { endAt: req.endAt ? new Date(req.endAt) : null } : {}),
       ...(req.venue !== undefined ? { venue: req.venue } : {}),
       ...(req.courtCount !== undefined ? { courtCount: req.courtCount } : {}),
+      // 不传 = 不改（前端编辑页只提交自己表单里的字段，漏传不能把局长填好的编号抹掉）；
+      // 显式传 null 或空串 = 清空，回落成序号显示
+      ...(req.courtLabels !== undefined ? { courtLabels: normalizeCourtLabels(req.courtLabels) } : {}),
       ...(req.capacity !== undefined ? { capacity: req.capacity } : {}),
       ...(req.signupDeadline !== undefined
         ? { signupDeadline: req.signupDeadline ? new Date(req.signupDeadline) : null }

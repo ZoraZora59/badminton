@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { View, Text, Input } from '@tarojs/components';
 import Taro, { useRouter, useDidShow } from '@tarojs/taro';
-import { MatchStatus, type MatchVM, type ParticipantVM } from '@badminton/shared';
+import { MatchStatus, courtLabel, type MatchVM, type ParticipantVM } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
 import { toastError } from '../../services/api';
@@ -20,6 +20,8 @@ export default function Scoring() {
   const activityId = Number(router.params.activityId);
 
   const [match, setMatch] = useState<MatchVM | null>(null);
+  // 球馆真实场地编号（透传自活动），把引擎里的 courtNo 翻成「5 号场」
+  const [courtLabels, setCourtLabels] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [scoreA, setScoreA] = useState(0);
   const [scoreB, setScoreB] = useState(0);
@@ -31,6 +33,7 @@ export default function Scoring() {
     try {
       await ensureLogin();
       const board = await api.getBoard(activityId);
+      setCourtLabels(board.courtLabels ?? null);
       let found: MatchVM | null = null;
       for (const r of board.rounds) {
         const m = r.matches.find((x) => String(x.id) === String(matchId));
@@ -159,7 +162,12 @@ export default function Scoring() {
   );
 
   return (
-    <PageFrame title={`场地 ${match.courtNo} · 计分`} activeTab="home" footer={footerNode} footerBare>
+    <PageFrame
+      title={`场地 ${courtLabel(courtLabels, match.courtNo)} · 计分`}
+      activeTab="home"
+      footer={footerNode}
+      footerBare
+    >
       <View className="sc__inner">
       {/* 大字比分区 */}
       <View className="sc__score-card">

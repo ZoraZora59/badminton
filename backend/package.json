@@ -13,7 +13,7 @@
     "db:seed": "tsx prisma/seed.ts --env=local",
     "test": "vitest run",
     "test:unit": "vitest run test/engine.test.ts test/levels.test.ts",
-    "test:api": "vitest run test/api.test.ts test/stats.test.ts",
+    "test:api": "vitest run test/api.test.ts test/stats.test.ts test/roster.test.ts",
     "test:watch": "vitest",
     "fix:aa": "tsx scripts/fix-prod-aa.ts"
   },

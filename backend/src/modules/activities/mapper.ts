@@ -23,6 +23,9 @@ export function toActivityVM(
     endAt: activity.endAt ? activity.endAt.toISOString() : null,
     venue: activity.venue,
     courtCount: activity.courtCount,
+    // 球馆真实场地编号（"5,6,12"）。引擎的 courtNo 恒为 1..N，这里只出原始串，
+    // 由展示层用 shared/courts 的 courtLabel 翻译；没填就是 null，展示回落成序号。
+    courtLabels: activity.courtLabels,
     capacity: activity.capacity,
     signupDeadline: activity.signupDeadline ? activity.signupDeadline.toISOString() : null,
     playType: activity.playType as PlayType,

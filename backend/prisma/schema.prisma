@@ -105,6 +105,9 @@ model Activity {
   endAt          DateTime?
   venue          String
   courtCount     Int            @default(1)
+  // 球馆给的真实场地编号，逗号分隔如 "5,6,12"。引擎里的 courtNo 恒为 1..N（第几片），
+  // 这里只影响展示：不填就回落成序号，所以是纯可选、对旧数据向后兼容。
+  courtLabels    String?        @db.Text
   capacity       Int            @default(8)
   signupDeadline DateTime?
   playType       PlayType       @default(DOUBLES)

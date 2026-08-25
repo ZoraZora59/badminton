@@ -18,6 +18,9 @@ const CreateBody = z.object({
   endAt: z.string().nullable().optional(),
   venue: z.string().min(1).max(60),
   courtCount: z.number().int().min(1).max(20),
+  // 球馆真实场地编号，逗号分隔如 "5,6,12"；选填，不填/清空则看板回落成序号。
+  // 刻意不校验格式：球馆可能给的是「A区3号」，只限总长度，避免往 Text 列灌大段文本
+  courtLabels: z.string().max(200).nullable().optional(),
   capacity: z.number().int().min(2).max(100),
   signupDeadline: z.string().nullable().optional(),
   playType: z.nativeEnum(PlayType),

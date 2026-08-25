@@ -65,6 +65,8 @@ export interface ActivityVM {
   endAt: string | null;
   venue: string;
   courtCount: number;
+  /** 球馆真实场地编号，逗号分隔如 "5,6,12"；null/不足时展示回落成序号 */
+  courtLabels: string | null;
   capacity: number;
   signupDeadline: string | null;
   playType: PlayType;
@@ -98,6 +100,8 @@ export interface CreateActivityReq {
   endAt?: string | null;
   venue: string;
   courtCount: number;
+  /** 球馆真实场地编号，逗号分隔如 "5,6,12"；选填 */
+  courtLabels?: string | null;
   capacity: number;
   signupDeadline?: string | null;
   playType: PlayType;
@@ -257,6 +261,8 @@ export interface BoardVM {
   status: ActivityStatus;
   currentRound: number;
   totalRounds: number;
+  /** 球馆真实场地编号（透传自活动），配合 courtLabel() 把 courtNo 翻成「5 号场」 */
+  courtLabels: string | null;
   rounds: RoundVM[];
 }
 

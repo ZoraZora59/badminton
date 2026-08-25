@@ -1,5 +1,5 @@
 import { Fragment, useState, useCallback, useMemo } from 'react';
-import { View, Text } from '@tarojs/components';
+import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, {
   useRouter,
   useDidShow,
@@ -8,8 +8,11 @@ import Taro, {
   useShareTimeline,
 } from '@tarojs/taro';
 import {
+  ActivityStatus,
   MatchStatus,
   Team,
+  courtLabel,
+  type ActivityVM,
   type BoardVM,
   type RoundVM,
   type MatchVM,
@@ -18,7 +21,7 @@ import {
 import { api } from '../../services/endpoints';
 import { toastError } from '../../services/api';
 import { useUser } from '../../store/user';
-import { Avatar, Tag, PrimaryButton, Empty, PageFrame } from '../../components';
+import { Avatar, Tag, PrimaryButton, Empty, Icon, PageFrame } from '../../components';
 import './index.scss';
 
 /** 「我的下一场」的三种形态；我不在这场比赛里（围观者 / 只组局不打的局长）时为 null */
@@ -35,19 +38,28 @@ export default function Board() {
 
   const [board, setBoard] = useState<BoardVM | null>(null);
   const [roster, setRoster] = useState<ParticipantVM[]>([]);
+  // 只为拿 isHost（BoardVM 里没有 hostId）和兜底 courtLabels，拉不到就当围观者，看板照常可看
+  const [activity, setActivity] = useState<ActivityVM | null>(null);
   const [roundIdx, setRoundIdx] = useState(0);
   const [touched, setTouched] = useState(false);
+  // 名单变动 / 换人：都是写操作，同一时间只允许一个在飞
+  const [rosterOpen, setRosterOpen] = useState(false);
+  const [acting, setActing] = useState(false);
+  const [swapMode, setSwapMode] = useState(false);
+  const [swapPick, setSwapPick] = useState<{ pid: number; name: string; matchId: number | null } | null>(null);
 
   const load = useCallback(async () => {
     try {
       // 花名册要单独取：全程轮空的人不出现在任何对阵里，光靠 board 反查不出「我」是谁。
       // 它只服务于「我的下一场」和轮空名字，拉不到就降级回对阵反查，绝不能让看板本身打不开。
-      const [b, ps] = await Promise.all([
+      const [b, ps, act] = await Promise.all([
         api.getBoard(id),
         api.listParticipants(id).catch(() => [] as ParticipantVM[]),
+        api.getActivity(id).catch(() => null),
       ]);
       setBoard(b);
       setRoster(ps);
+      setActivity(act);
       // 首次进入定位到当前轮；返回刷新时保留用户已切换的轮次
       setRoundIdx((prev) => (touched ? Math.min(prev, b.rounds.length - 1) : Math.max(0, b.currentRound - 1)));
     } catch (e) {
@@ -158,6 +170,37 @@ export default function Board() {
     return firstMatch ?? { kind: 'done', played };
   }, [board, myPid]);
 
+  /**
+   * 一轮算不算「还没打的将来」：有没打完的对局，或者一场对局都没有。
+   * 空轮次是「没人可顶 → 整场撤掉」留下的坑，它仍属将来——若把它当历史，
+   * 4 人 1 片场走掉一个之后全场就再没有「后续对局」，名单入口整块消失，
+   * 局长既看不到谁走了、也没法把人换回来（开打后没有重新分组的入口）。
+   */
+  const isUpcomingRound = (r: RoundVM) =>
+    r.matches.length === 0 || r.matches.some((mt) => mt.status !== MatchStatus.FINISHED);
+
+  /** 全场赛程有没有打完——全打完了就没有「后续对局」可换，名单调整也就没有意义 */
+  const hasPending = useMemo(() => !!board?.rounds.some(isUpcomingRound), [board]);
+
+  /**
+   * 花名册 + 「还在不在场上」。
+   * 在场 = 还出现在某个没打完的对局里，或还挂在某个没打完轮次的轮空名单里；
+   * 两处都找不到 = 已经被换下场（提前走了），可以「TA 回来了」把人放回轮空池。
+   */
+  const rosterRows = useMemo(() => {
+    const active = new Set<number>();
+    board?.rounds.forEach((r) => {
+      // 一轮里只要还没打完，它的轮空名单就仍然是「等着上场的人」
+      const roundOpen = isUpcomingRound(r);
+      r.matches.forEach((mt) => {
+        if (mt.status === MatchStatus.FINISHED) return;
+        [...mt.teamA.participants, ...mt.teamB.participants].forEach((p) => active.add(p.id));
+      });
+      if (roundOpen) r.byeParticipantIds.forEach((pid) => active.add(pid));
+    });
+    return roster.map((p) => ({ p, active: active.has(p.id) }));
+  }, [board, roster]);
+
   if (!board) {
     return (
       <PageFrame title="对阵看板" activeTab="home">
@@ -175,6 +218,21 @@ export default function Board() {
   const hasPrev = roundIdx > 0;
   const hasNext = roundIdx < board.rounds.length - 1;
 
+  /**
+   * 场地显示号：引擎里的 courtNo 恒为 1..N，球馆给的是「5、6、12 号场」。
+   * 以 board 透传的为准，活动详情的作为兜底；都没填时 courtLabel 自动回落成序号。
+   */
+  const cl = (courtNo: number) => courtLabel(board.courtLabels ?? activity?.courtLabels, courtNo);
+
+  // 局长身份只能从活动详情拿（BoardVM 没有 hostId）；拉不到就当围观者，所有编辑入口都不出现
+  const isHost = activity?.isHost === true;
+  // 已结束/已取消的球局改名单没有意义，入口整块不渲染，不留空壳按钮
+  const canEditRoster = isHost && board.status === ActivityStatus.ONGOING;
+  const roundOpen = !!round && round.matches.some((m) => m.status !== MatchStatus.FINISHED);
+  // 后端的 swap 只在同一轮内生效，所以本轮全打完了就不给换人
+  const swapping = canEditRoster && swapMode && roundOpen;
+  const leftCount = rosterRows.filter((r) => !r.active).length;
+
   const finishedCount = board.rounds.reduce(
     (acc, r) => acc + r.matches.filter((m) => m.status === MatchStatus.FINISHED).length,
     0,
@@ -190,16 +248,95 @@ export default function Board() {
   const goPrev = () => {
     if (!hasPrev) return;
     setTouched(true);
+    setSwapPick(null);
     setRoundIdx((i) => i - 1);
   };
   const goNext = () => {
     if (!hasNext) return;
     setTouched(true);
+    setSwapPick(null);
     setRoundIdx((i) => i + 1);
   };
   const jumpRound = (i: number) => {
     setTouched(true);
+    setSwapPick(null);
     setRoundIdx(i);
+  };
+
+  /** 写操作回来的就是新看板，直接换掉；花名册跟着重拉，避免「已离场」状态和看板对不上 */
+  const applyBoard = async (vm: BoardVM) => {
+    setBoard(vm);
+    setRoundIdx((prev) => Math.max(0, Math.min(prev, vm.rounds.length - 1)));
+    setSwapPick(null);
+    const ps = await api.listParticipants(id).catch(() => null);
+    if (ps) setRoster(ps);
+  };
+
+  /** 「TA 要走了」：会改后续赛程，必须先说清后果再动手 */
+  const onWithdraw = async (p: ParticipantVM) => {
+    if (acting) return;
+    const res = await Taro.showModal({
+      title: `${p.displayName} 要走了？`,
+      content: '会把 TA 从后面还没打的对局里换下来，由轮空的球友顶上；已经打完的比分不受影响。',
+      confirmText: '确认换下',
+      cancelText: '再想想',
+    });
+    if (!res.confirm) return;
+    setActing(true);
+    try {
+      await applyBoard(await api.withdrawParticipant(id, p.id));
+      Taro.showToast({ title: '已换下场', icon: 'none' });
+    } catch (e) {
+      toastError(e);
+    } finally {
+      setActing(false);
+    }
+  };
+
+  /** 「TA 回来了」：只是把人放回后续轮次的轮空池，不动已排好的对阵，不用二次确认 */
+  const onRejoin = async (p: ParticipantVM) => {
+    if (acting) return;
+    setActing(true);
+    try {
+      await applyBoard(await api.rejoinParticipant(id, p.id));
+      Taro.showToast({ title: '已回到轮空席', icon: 'none' });
+    } catch (e) {
+      toastError(e);
+    } finally {
+      setActing(false);
+    }
+  };
+
+  /**
+   * 本轮换人：选中一人，再点另一人（含轮空席）完成对调。
+   * 后端只按「这一场对局所在的那一轮」处理，所以锚点用先选中那位所在的对局；
+   * 两个都是轮空席时没有场上位置可换，直接提示。
+   */
+  const onTapPlayer = async (pid: number, name: string, matchId: number | null) => {
+    if (!swapping || acting) return;
+    if (!swapPick) {
+      setSwapPick({ pid, name, matchId });
+      return;
+    }
+    if (swapPick.pid === pid) {
+      setSwapPick(null);
+      return;
+    }
+    const anchor = swapPick.matchId ?? matchId;
+    if (anchor == null) {
+      Taro.showToast({ title: '至少选一个场上的人', icon: 'none' });
+      return;
+    }
+    setActing(true);
+    try {
+      await applyBoard(await api.swap(anchor, swapPick.pid, pid));
+      Taro.showToast({ title: '本轮已换人', icon: 'none' });
+    } catch (e) {
+      toastError(e);
+      setSwapPick(null);
+    } finally {
+      setActing(false);
+    }
   };
 
   const enterScoring = (m: MatchVM) => {
@@ -209,10 +346,21 @@ export default function Board() {
     Taro.navigateTo({ url: `/pages/summary/index?id=${id}` });
   };
 
-  const renderTeam = (participants: ParticipantVM[], align: 'left' | 'right') => (
+  const renderTeam = (participants: ParticipantVM[], align: 'left' | 'right', matchId: number) => (
     <View className={`court__team court__team--${align}`}>
       {participants.map((p) => (
-        <View key={p.id} className={`court__player ${isMe(p) ? 'court__player--me' : ''}`}>
+        <View
+          key={p.id}
+          className={[
+            'court__player',
+            isMe(p) ? 'court__player--me' : '',
+            swapping ? 'court__player--tap' : '',
+            swapPick?.pid === p.id ? 'court__player--pick' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          onClick={swapping ? () => onTapPlayer(p.id, p.displayName, matchId) : undefined}
+        >
           {align === 'left' ? (
             <>
               <Avatar name={p.displayName} src={p.avatarUrl} size={26} />
@@ -306,7 +454,7 @@ export default function Board() {
                   className="mine__line-v"
                   onClick={() => myNext.next && jumpRound(myNext.next.roundIdx)}
                 >
-                  第 {myNext.next.roundIdx + 1} 轮 · 场地 {myNext.next.courtNo} ›
+                  第 {myNext.next.roundIdx + 1} 轮 · 场地 {cl(myNext.next.courtNo)} ›
                 </Text>
               </View>
             </View>
@@ -325,7 +473,7 @@ export default function Board() {
           <Text className="mine__round" onClick={() => jumpRound(myNext.roundIdx)}>
             第 {myNext.roundIdx + 1} 轮 ›
           </Text>
-          <Text className="mine__court">场地 {match.courtNo}</Text>
+          <Text className="mine__court">场地 {cl(match.courtNo)}</Text>
         </View>
         <View className="mine__lines">
           {partners.length > 0 ? (
@@ -346,17 +494,116 @@ export default function Board() {
     );
   })();
 
+  // 本场名单弹层（仅局长）：一行一个人，直接改「TA 要走了 / TA 回来了」
+  const rosterNode =
+    canEditRoster && rosterOpen ? (
+      <View className="rsheet">
+        <View className="rsheet__mask" onClick={() => setRosterOpen(false)} />
+        <View className="rsheet__panel">
+          <View className="rsheet__handle" />
+          <View className="rsheet__head">
+            <View className="rsheet__head-txt">
+              <Text className="rsheet__title">本场名单</Text>
+              <Text className="rsheet__sub">
+                {hasPending
+                  ? '换下的人由轮空球友顶替，打完的比分不受影响'
+                  : '赛程已全部打完，改名单不再影响对局'}
+              </Text>
+            </View>
+            <View className="rsheet__close" onClick={() => setRosterOpen(false)}>
+              ✕
+            </View>
+          </View>
+
+          {rosterRows.length === 0 ? (
+            <Empty text="没拉到本场名单" hint="关掉这里下拉刷新再试一次" />
+          ) : (
+            <ScrollView scrollY className="rsheet__list">
+              {rosterRows.map(({ p, active }) => (
+                <View key={p.id} className="rsheet__row">
+                  <Avatar name={p.displayName} src={p.avatarUrl} size={32} />
+                  <View className="rsheet__info">
+                    <View className="rsheet__nameline">
+                      <Text className={`rsheet__name ${isMe(p) ? 'rsheet__name--me' : ''}`}>{p.displayName}</Text>
+                      {p.isGuest ? <Tag text="临时" tone="muted" /> : null}
+                    </View>
+                    <Text className={`rsheet__state ${active ? '' : 'rsheet__state--off'}`}>
+                      {!hasPending ? '赛程已打完' : active ? '在场上' : '已离场'}
+                    </Text>
+                  </View>
+                  {/* 全部打完就没有「后续对局」可改，这时不给按钮，避免点了什么都不会发生 */}
+                  {hasPending ? (
+                    <View
+                      className={[
+                        'rsheet__act',
+                        active ? '' : 'rsheet__act--back',
+                        acting ? 'rsheet__act--busy' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      onClick={() => (active ? onWithdraw(p) : onRejoin(p))}
+                    >
+                      {active ? 'TA 要走了' : 'TA 回来了'}
+                    </View>
+                  ) : null}
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+      </View>
+    ) : null;
+
   return (
-    <PageFrame title="对阵看板" activeTab="home" subHeader={switcherNode}>
+    <PageFrame title="对阵看板" activeTab="home" subHeader={switcherNode} overlay={rosterNode}>
       <View className="board">
         <View className="board__inner">
         {mineNode}
+
+        {/* 名单变动入口（仅局长）：「老李 9 点得走」「隔壁球友临时来了」都在这里改。
+            全场都打完了就没有「后续对局」可动，入口整块收起，不给点了没反应的按钮 */}
+        {canEditRoster && hasPending ? (
+          <View className="rbar" onClick={() => setRosterOpen(true)}>
+            <Icon name="users" size={16} color="#0b5e34" />
+            <View className="rbar__body">
+              <Text className="rbar__title">有人要走 / 有人来了</Text>
+              <Text className="rbar__sub">
+                {rosterRows.length === 0
+                  ? '花名册没拉到，下拉刷新再试'
+                  : `本场 ${rosterRows.length} 人${leftCount > 0 ? ` · ${leftCount} 人已离场` : ''}`}
+              </Text>
+            </View>
+            <Text className="rbar__arrow">›</Text>
+          </View>
+        ) : null}
 
         {/* 本场结算入口（有已结束对局时） */}
         {finishedCount > 0 ? (
           <View className="board__summary" onClick={goSummary}>
             <Text className="board__summary-txt">本场结算</Text>
             <Text className="board__summary-arrow">›</Text>
+          </View>
+        ) : null}
+
+        {/* 本轮换人（仅局长）：后端 swap 只在同一轮内生效，文案也只承诺本轮 */}
+        {canEditRoster && roundOpen ? (
+          <View className="swapbar">
+            <View
+              className={`swapbar__btn ${swapMode ? 'swapbar__btn--on' : ''}`}
+              onClick={() => {
+                setSwapMode((v) => !v);
+                setSwapPick(null);
+              }}
+            >
+              {swapMode ? '完成' : '本轮换人'}
+            </View>
+            <Text className="swapbar__hint">
+              {swapMode
+                ? swapPick
+                  ? `已选 ${swapPick.name}，再点另一人完成对调`
+                  : '点一名球友，再点另一人（含轮空席）对调'
+                : '只调整本轮，不影响其它轮次'}
+            </Text>
           </View>
         ) : null}
 
@@ -370,7 +617,7 @@ export default function Board() {
             return (
               <View key={m.id} className={`court ${done ? '' : 'court--active'}`}>
                 <View className="court__head">
-                  <Text className="court__title">场地 {m.courtNo}</Text>
+                  <Text className="court__title">场地 {cl(m.courtNo)}</Text>
                   {done ? (
                     <Tag text="已结束" tone="muted" />
                   ) : ongoing ? (
@@ -393,9 +640,9 @@ export default function Board() {
                 ) : (
                   <>
                     <View className="court__vs">
-                      {renderTeam(m.teamA.participants, 'left')}
+                      {renderTeam(m.teamA.participants, 'left', Number(m.id))}
                       <Text className="court__vs-label">VS</Text>
-                      {renderTeam(m.teamB.participants, 'right')}
+                      {renderTeam(m.teamB.participants, 'right', Number(m.id))}
                     </View>
                     <PrimaryButton text="▶  进入计分" onClick={() => enterScoring(m)} />
                   </>
@@ -403,6 +650,10 @@ export default function Board() {
               </View>
             );
           })
+        ) : round && round.byeParticipantIds.length > 0 ? (
+          // 「没人可顶 → 整场撤掉」留下的空轮次。写「暂无对局」等于没说，
+          // 局长会以为是加载问题；直接讲清楚是人不够，以及怎么才能继续打
+          <Empty text="本轮没排上对局" hint="场上人数不够开一场，等有人回来再打" />
         ) : (
           <Empty text="本轮暂无对局" hint="切换其它轮次看看" />
         )}
@@ -420,6 +671,21 @@ export default function Board() {
               ))}
               {' 本轮休息'}
             </Text>
+          </View>
+        ) : null}
+
+        {/* 换人时轮空席要能点：让轮空的人顶替场上任意一位 */}
+        {swapping && byeList.length > 0 ? (
+          <View className="bye__picks">
+            {byeList.map((b) => (
+              <View
+                key={b.pid}
+                className={`bye__pick ${swapPick?.pid === b.pid ? 'bye__pick--on' : ''}`}
+                onClick={() => onTapPlayer(b.pid, b.name, null)}
+              >
+                <Text className="bye__pick-name">{b.name}</Text>
+              </View>
+            ))}
           </View>
         ) : null}
 
@@ -449,7 +715,7 @@ export default function Board() {
                     const done = m.status === MatchStatus.FINISHED;
                     return (
                       <View key={String(m.id)} className="sched__match">
-                        <Text className="sched__court num">场{m.courtNo}</Text>
+                        <Text className="sched__court num">场{cl(m.courtNo)}</Text>
                         <Text className="sched__names">
                           {renderSchedNames(m.teamA.participants)}
                           <Text className="sched__vs"> vs </Text>

@@ -5,6 +5,7 @@ import {
   PlayType,
   GroupMode,
   RotationKind,
+  courtLabel,
   type ParticipantVM,
   type GroupingScheduleVM,
   type MatchVM,
@@ -65,6 +66,8 @@ export default function Grouping() {
   // 活动起止时间：用于按时长估算建议轮数（仅提示，不强绑定）
   const [actStart, setActStart] = useState<string>('');
   const [actEnd, setActEnd] = useState<string | null>(null);
+  // 球馆真实场地编号（建局时选填）：预览这步就按真编号显示，省得开打后再对一次
+  const [courtLabels, setCourtLabels] = useState<string | null>(null);
   // 混双在建局阶段设置，这里只继承活动设置、不再提供开关
   const [mixedDoubles, setMixedDoubles] = useState(false);
   // 仅首次进入用建局设置初始化向导，之后不覆盖局长的现场调整
@@ -87,6 +90,7 @@ export default function Grouping() {
       // 起止时间用于轮数估算提示（每次刷新，渲染区间用）
       setActStart(activity.startAt);
       setActEnd(activity.endAt);
+      setCourtLabels(activity.courtLabels ?? null);
       // 用建局设置作为向导默认值（玩法/场地数/混双/轮数），仅首次
       // 分组模式不在建局设置：defaultMode 缺省为 BALANCED，向导从智能平衡起步、由用户在此选择
       if (!seededRef.current) {
@@ -543,7 +547,7 @@ export default function Grouping() {
                   round.matches.map((m) => (
                     <View key={String(m.id)} className="gp-court__match">
                       <View className="gp-court__row">
-                        <Text className="gp-court__court">场地 {m.courtNo}</Text>
+                        <Text className="gp-court__court">场地 {courtLabel(courtLabels, m.courtNo)}</Text>
                         {mode === GroupMode.BALANCED ? (
                           <Tag text={`实力差 ${m.strengthGap}`} tone="success" />
                         ) : null}

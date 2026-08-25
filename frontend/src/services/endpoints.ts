@@ -57,6 +57,14 @@ export const api = {
   listParticipants: (id: number) => http.get<ParticipantVM[]>(`/activities/${id}/participants`),
   promote: (id: number, signupId: number) => http.post<SignupVM[]>(`/activities/${id}/signups/${signupId}/promote`),
 
+  // 开打后的名单变动（仅局长）——「老李 9 点得走」「隔壁球友临时来了」
+  /** TA 要走了：从后续还没打的对局里摘掉，由轮空球友顶替；已打完的比分不动 */
+  withdrawParticipant: (id: number, pid: number) =>
+    http.post<BoardVM>(`/activities/${id}/participants/${pid}/withdraw`),
+  /** TA 回来了 / 临时来了：加入后续轮次的轮空池，等着被换上场 */
+  rejoinParticipant: (id: number, pid: number) =>
+    http.post<BoardVM>(`/activities/${id}/participants/${pid}/rejoin`),
+
   // 分组
   previewGrouping: (id: number, body: GroupingPreviewReq) =>
     http.post<GroupingScheduleVM>(`/activities/${id}/grouping/preview`, body),
