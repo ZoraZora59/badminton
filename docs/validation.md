@@ -26,7 +26,7 @@
 | US-2.1 建局表单 | `POST /activities` | api.test 建局→status=SIGNUP、局长默认报名；`create` 页（**开打/结束时间均必填，结束需晚于开打，默认开打+2h；`endAt` 模型/接口/分享卡早已支持，本次补上表单入口**） | ✅ |
 | US-2.2 活动分享卡 | `GET /activities/:id/share-card` | **建局成功后自动弹出分享卡预览**（`ShareCard` 弹层：标题/时间/地点/已报-上限/CTA）；`activity` 页「分享球局」复用同卡；转发走 useShareAppMessage | ✅ |
 | US-2.3 编辑/取消活动 | `PATCH /activities/:id`、`POST /activities/:id/cancel` | api.test「G1」非局长 cancel/PATCH → 403 且活动状态不受影响；「R1」局长空 body 取消 → CANCELLED | ✅ |
-| US-2.4 首页三态卡 + 空态 | `GET /activities?status=` | `home` 页三态 Tab+卡片+空态；v1 不做口令/粘贴框，空态误导文案已移除（改为「分享给球友一起打」） | ✅ |
+| US-2.4 首页球局单列表 + 空态 | `GET /activities` | `home` 页**去掉三态筛选栏**，改为单列表（进行中 → 报名中 → 已结束；未结束按开打时间由近及远、已结束由新到旧，交界处「已结束」分隔线，已取消不进列表）；排序与分隔位置抽到 `frontend/src/utils/activity.ts`，`frontend/test/activity.test.ts` 11 条单测锁定；卡片右上角标签仍表达状态；v1 不做口令/粘贴框，空态误导文案已移除（改为「分享给球友一起打」） | ✅ |
 
 ## E3 报名 / 候补 / 请假
 | 故事 | 接口 | 测试/页面 | 状态 |

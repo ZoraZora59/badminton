@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { Fragment, useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro';
 import { ActivityStatus, type ActivityVM, type UserStatsVM } from '@badminton/shared';
@@ -8,17 +8,11 @@ import { useUser } from '../../store/user';
 import { toastError } from '../../services/api';
 import { Avatar, Tag, Empty, Icon } from '../../components';
 import { fmtCardTime } from '../../utils/format';
+import { finishedDividerIndex, sortHomeActivities } from '../../utils/activity';
 import './index.scss';
-
-const TABS: { key: ActivityStatus; label: string }[] = [
-  { key: ActivityStatus.SIGNUP, label: '报名中' },
-  { key: ActivityStatus.ONGOING, label: '进行中' },
-  { key: ActivityStatus.FINISHED, label: '已结束' },
-];
 
 export default function Home() {
   const user = useUser();
-  const [tab, setTab] = useState<ActivityStatus>(ActivityStatus.SIGNUP);
   const [all, setAll] = useState<ActivityVM[]>([]);
   const [stats, setStats] = useState<UserStatsVM | null>(null);
 
@@ -52,7 +46,9 @@ export default function Home() {
   }));
 
   const signupCount = all.filter((a) => a.status === ActivityStatus.SIGNUP).length;
-  const shown = all.filter((a) => a.status === tab);
+  // 去掉三态筛选栏，改为单列表：排序和「已结束」分隔位置由 utils/activity 统一决定
+  const shown = useMemo(() => sortHomeActivities(all), [all]);
+  const dividerAt = finishedDividerIndex(shown);
 
   const statusTag = (a: ActivityVM) => {
     if (a.status === ActivityStatus.SIGNUP)
@@ -93,54 +89,55 @@ export default function Home() {
 
       {/* 列表区 */}
       <View className="home__body">
-        <View className="home__tabs">
-          {TABS.map((t) => (
-            <View key={t.key} className={`home__tab ${tab === t.key ? 'home__tab--on' : ''}`} onClick={() => setTab(t.key)}>
-              {t.label}
-            </View>
-          ))}
-        </View>
-
         <ScrollView scrollY className="home__list">
           {shown.length === 0 ? (
             <Empty text="这里还没有球局" hint="点右下角 + 发起新局，分享给球友一起打" />
           ) : (
-            shown.map((a) => (
-              <View key={a.id} className="card" onClick={() => Taro.navigateTo({ url: `/pages/activity/index?id=${a.id}` })}>
-                <View className="card__top">
-                  <Text className="card__title">{a.title}</Text>
-                  {statusTag(a)}
-                </View>
-                <View className="card__meta">
-                  <View className="card__meta-item">
-                    <Icon name="clock" size={13} color="#80878f" />
-                    <Text className="card__meta-txt num">{fmtCardTime(a.startAt)}</Text>
+            shown.map((a, idx) => (
+              <Fragment key={a.id}>
+                {idx === dividerAt ? (
+                  <View className="home__sep">
+                    <View className="home__sep-line" />
+                    <Text className="home__sep-txt">已结束</Text>
+                    <View className="home__sep-line" />
                   </View>
-                  <View className="card__meta-item">
-                    <Icon name="pin" size={13} color="#80878f" />
-                    <Text className="card__meta-txt">{a.venue} · {a.courtCount} 片</Text>
+                ) : null}
+                <View className="card" onClick={() => Taro.navigateTo({ url: `/pages/activity/index?id=${a.id}` })}>
+                  <View className="card__top">
+                    <Text className="card__title">{a.title}</Text>
+                    {statusTag(a)}
                   </View>
-                </View>
-                <View className="card__bottom">
-                  <View className="card__wall">
-                    {a.members.slice(0, 4).map((m, i) => (
-                      <View key={m.id} className="card__wall-item" style={{ marginLeft: i === 0 ? 0 : '-9px', zIndex: 10 - i }}>
-                        <Avatar name={m.nickname} src={m.avatarUrl} size={28} ring />
-                      </View>
-                    ))}
-                    {a.signedUpCount > 4 ? <View className="card__more">+{a.signedUpCount - 4}</View> : null}
-                  </View>
-                  <View className="card__progress">
-                    <View className="card__bar">
-                      <View className="card__bar-fill" style={{ width: `${Math.min(100, Math.round((a.signedUpCount / a.capacity) * 100))}%` }} />
+                  <View className="card__meta">
+                    <View className="card__meta-item">
+                      <Icon name="clock" size={13} color="#80878f" />
+                      <Text className="card__meta-txt num">{fmtCardTime(a.startAt)}</Text>
                     </View>
-                    <Text className="card__count num">
-                      {a.signedUpCount}/{a.capacity}
-                      {a.waitlistCount > 0 ? ` · 候补 ${a.waitlistCount}` : ''}
-                    </Text>
+                    <View className="card__meta-item">
+                      <Icon name="pin" size={13} color="#80878f" />
+                      <Text className="card__meta-txt">{a.venue} · {a.courtCount} 片</Text>
+                    </View>
+                  </View>
+                  <View className="card__bottom">
+                    <View className="card__wall">
+                      {a.members.slice(0, 4).map((m, i) => (
+                        <View key={m.id} className="card__wall-item" style={{ marginLeft: i === 0 ? 0 : '-9px', zIndex: 10 - i }}>
+                          <Avatar name={m.nickname} src={m.avatarUrl} size={28} ring />
+                        </View>
+                      ))}
+                      {a.signedUpCount > 4 ? <View className="card__more">+{a.signedUpCount - 4}</View> : null}
+                    </View>
+                    <View className="card__progress">
+                      <View className="card__bar">
+                        <View className="card__bar-fill" style={{ width: `${Math.min(100, Math.round((a.signedUpCount / a.capacity) * 100))}%` }} />
+                      </View>
+                      <Text className="card__count num">
+                        {a.signedUpCount}/{a.capacity}
+                        {a.waitlistCount > 0 ? ` · 候补 ${a.waitlistCount}` : ''}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
+              </Fragment>
             ))
           )}
           <View className="home__list-pad" />

@@ -70,23 +70,21 @@
     flex-direction: column;
     overflow: hidden;
   }
-  &__tabs {
+  /* 「已结束」分隔：替代原来的三态筛选栏，只在历史局出现的位置画一条细线 */
+  &__sep {
     display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 2px 14px;
   }
-  &__tab {
-    padding: 7px 16px;
-    border-radius: 15px;
-    background: #fff;
-    font-size: 12px;
-    color: var(--c-text-3);
-
-    &--on {
-      background: var(--c-primary-dark);
-      color: #fff;
-      font-weight: 600;
-    }
+  &__sep-line {
+    flex: 1;
+    height: 1px;
+    background: var(--c-border-2);
+  }
+  &__sep-txt {
+    font-size: 11px;
+    color: var(--c-text-4);
   }
   &__list {
     flex: 1;
