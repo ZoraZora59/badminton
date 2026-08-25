@@ -114,6 +114,10 @@ describe('E2–E8 完整用户故事走查', () => {
     activityId = created.body.data.id;
     expect(created.body.data.status).toBe(ActivityStatus.SIGNUP);
     expect(created.body.data.signedUpCount).toBe(1); // 局长默认报名
+    // 首页列表按 updatedAt 倒序排（「最新有状态变化的在最上面」），所以这个字段必须真的出到 VM 里
+    const createdUpdatedAt: string = created.body.data.updatedAt;
+    expect(typeof createdUpdatedAt).toBe('string');
+    expect(Number.isNaN(new Date(createdUpdatedAt).getTime())).toBe(false);
 
     // 分享卡（免登录）
     const card = await api('GET', `/api/activities/${activityId}/share-card`);
@@ -127,6 +131,8 @@ describe('E2–E8 完整用户故事走查', () => {
     });
     expect(edit.body.code).toBe(0);
     expect(edit.body.data.remark).toBe('记得带水');
+    // 活动行被改动 → updatedAt 前进，首页该局才会重新冒到顶部
+    expect(new Date(edit.body.data.updatedAt).getTime()).toBeGreaterThan(new Date(createdUpdatedAt).getTime());
 
     // E3 报名：p1,p2,p3 进正选(共4)，p4 满员候补
     for (const p of [p1, p2, p3]) {

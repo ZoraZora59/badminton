@@ -74,6 +74,11 @@ export interface ActivityVM {
   remark: string | null;
   status: ActivityStatus;
   createdAt: string;
+  /**
+   * 活动行最近一次变更时间（建局/开打/结束/取消/编辑都会刷新），首页列表按它倒序排。
+   * 注意：报名/签到/计分只改 Signup/Match 行，不会刷新这里。
+   */
+  updatedAt: string;
   // 聚合
   signedUpCount: number;
   waitlistCount: number;

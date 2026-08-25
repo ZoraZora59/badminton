@@ -31,6 +31,7 @@ export function toActivityVM(
     remark: activity.remark,
     status: activity.status as ActivityStatus,
     createdAt: activity.createdAt.toISOString(),
+    updatedAt: activity.updatedAt.toISOString(),
     signedUpCount: counts.signedUpCount,
     waitlistCount: counts.waitlistCount,
     leaveCount: counts.leaveCount,
