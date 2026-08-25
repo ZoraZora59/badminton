@@ -6,14 +6,33 @@ import {
   SignupStatus,
   type ActivityVM,
   type SignupVM,
+  type Gender,
 } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
-import { useUser } from '../../store/user';
+import { useUser, setUser } from '../../store/user';
 import { toastError } from '../../services/api';
-import { Avatar, Tag, PrimaryButton, Empty, ShareCard, Icon, PageFrame } from '../../components';
-import { fmtRange, fmtMonthDay, cleanRemark, playTypeText } from '../../utils/format';
+import { Avatar, Tag, PrimaryButton, Empty, ShareCard, Icon, PageFrame, ProfileSheet } from '../../components';
+import { fmtRange, fmtMonthDay, fmtWeekday, fmtHM, cleanRemark, playTypeText } from '../../utils/format';
 import './index.scss';
+
+/** 后端建号时写死的占位昵称，等价于「这人还没填过资料」 */
+const PLACEHOLDER_NICK = '球友';
+/** 距开打这么久以内，「我已到场·签到」才当主按钮；更早只降级、不禁用 */
+const CHECKIN_SOON_MS = 2 * 60 * 60 * 1000;
+/** 名单每段默认露出的格子数，超出折叠成 +N（可展开看全部） */
+const WALL_MAX = 8;
+
+/** 还是占位头像/占位昵称 → 第一次报名前先补一次资料 */
+function needProfile(u: { nickname: string; avatarUrl: string } | null): boolean {
+  if (!u) return false; // 拿不到本地用户信息就别拦，交给报名接口自己处理
+  return !u.avatarUrl || !u.nickname.trim() || u.nickname === PLACEHOLDER_NICK;
+}
+
+/** 看某位球友的战绩（player 是 profile 的非 tabBar 孪生路由，可 navigateTo） */
+function goPlayer(userId: number): void {
+  Taro.navigateTo({ url: `/pages/player/index?id=${userId}` });
+}
 
 export default function Activity() {
   const router = useRouter();
@@ -25,8 +44,11 @@ export default function Activity() {
   const [signups, setSignups] = useState<SignupVM[]>([]);
   const [busy, setBusy] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   // 建局后跳来带 share=1：仅自动弹一次分享卡
   const sharePrompted = useRef(false);
+  // 完善资料弹层关掉后要接着做的事（报名/候补）——保存、跳过、失败都会照常执行
+  const pendingAction = useRef<(() => void) | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -74,6 +96,50 @@ export default function Activity() {
     [busy, load],
   );
 
+  /** 关掉资料弹层并执行原本的动作 */
+  const runPending = useCallback(() => {
+    const fn = pendingAction.current;
+    pendingAction.current = null;
+    setProfileOpen(false);
+    fn?.();
+  }, []);
+
+  /**
+   * 第一次报名前先要个头像和名字：否则头像墙上全是一样的灰圈「球友」，
+   * 局长只能在群里挨个问「谁是球友」。任何情况都不阻断报名。
+   */
+  const withProfile = useCallback(
+    (action: () => void) => {
+      if (!needProfile(me)) {
+        action();
+        return;
+      }
+      pendingAction.current = action;
+      setProfileOpen(true);
+    },
+    [me],
+  );
+
+  const saveProfile = useCallback(
+    async (data: { nickname: string; avatarUrl: string; gender: Gender }) => {
+      try {
+        const updated = await api.updateMe({
+          nickname: data.nickname,
+          avatarUrl: data.avatarUrl,
+          gender: data.gender,
+          // 水平不在这个弹层里改（自评有社交压力，留给局长在签到页定），原样带回
+          defaultLevel: me?.defaultLevel,
+        });
+        setUser(updated);
+      } catch (e) {
+        toastError(e); // 存资料失败也不该挡住报名
+      } finally {
+        runPending();
+      }
+    },
+    [me, runPending],
+  );
+
   /** 取消球局是不可逆操作，先二次确认再执行，避免误触 */
   const confirmCancel = useCallback(async () => {
     if (busy) return;
@@ -109,6 +175,17 @@ export default function Activity() {
   const leave = signups.filter((s) => s.status === SignupStatus.LEAVE);
   const full = act.signedUpCount >= act.capacity;
 
+  // 候补排位：后端已按 status → order 排好，数组下标 + 1 就是我排第几
+  const myWaitIdx = me ? waitlist.findIndex((s) => s.user.id === me.id) : -1;
+  const waitRank = myWaitIdx >= 0 ? myWaitIdx + 1 : 0;
+  // 带了几个人会影响补位条件：autofill 要求一次能塞下「我 + 我带的人」，否则队列停在这里不跳位
+  const waitPlusOne = myWaitIdx >= 0 ? waitlist[myWaitIdx].plusOne : 0;
+
+  // 报名截止只做展示：业余局截止是软的，群里说「还能来吗」局长说「来吧」，硬拒绝只会添乱
+  const deadlineTxt = act.signupDeadline
+    ? `${fmtMonthDay(act.signupDeadline)} ${fmtWeekday(act.signupDeadline)} ${fmtHM(act.signupDeadline)}`
+    : '';
+
   // Hero 状态徽标文案
   let badge = '报名中';
   if (cancelled) badge = '已取消';
@@ -120,7 +197,17 @@ export default function Activity() {
   const actionsNode = isHost ? (
     <HostActions act={act} id={id} busy={busy} onCancel={confirmCancel} />
   ) : (
-    <GuestActions act={act} mine={mine} full={full} busy={busy} run={run} id={id} />
+    <GuestActions
+      act={act}
+      mine={mine}
+      full={full}
+      busy={busy}
+      run={run}
+      id={id}
+      waitRank={waitRank}
+      waitPlusOne={waitPlusOne}
+      guard={withProfile}
+    />
   );
 
   const shareOverlay = (
@@ -160,8 +247,24 @@ export default function Activity() {
     </ShareCard>
   );
 
+  const overlay = (
+    <>
+      {shareOverlay}
+      <ProfileSheet
+        visible={profileOpen}
+        nickname={me?.nickname ?? ''}
+        avatarUrl={me?.avatarUrl ?? ''}
+        gender={me?.gender}
+        confirmText={full ? '保存并候补' : '保存并报名'}
+        skipText={full ? '先跳过，直接候补' : '先跳过，直接报名'}
+        onConfirm={saveProfile}
+        onSkip={runPending}
+      />
+    </>
+  );
+
   return (
-    <PageFrame title={act.title} activeTab="home" footer={actionsNode} footerBare overlay={shareOverlay}>
+    <PageFrame title={act.title} activeTab="home" footer={actionsNode} footerBare overlay={overlay}>
       <View className="act__body">
         {/* 活动信息卡（状态 + 时间/地点/玩法，下沉自原绿色 Hero）*/}
         <View className="act__info">
@@ -185,6 +288,13 @@ export default function Activity() {
               </Text>
             </View>
           </View>
+          {/* 报名截止：局长填了球友就该看得见（只展示，不做过期拦截） */}
+          {deadlineTxt ? (
+            <View className="act__deadline">
+              <Text className="act__deadline-label">报名截止</Text>
+              <Text className="act__deadline-txt num">{deadlineTxt}</Text>
+            </View>
+          ) : null}
         </View>
 
         <View className="card">
@@ -199,9 +309,9 @@ export default function Activity() {
             <Empty text="还没有人报名" hint="把球局分享给球友，召集开打" />
           ) : (
             <>
-              <WallSection title="已报名" tone="success" items={signed} hostId={act.hostId} />
-              <WallSection title="候补" tone="warn" items={waitlist} hostId={act.hostId} />
-              <WallSection title="请假" tone="muted" items={leave} hostId={act.hostId} />
+              <WallSection title="已报名" tone="success" items={signed} hostId={act.hostId} meId={me?.id} />
+              <WallSection title="候补" tone="warn" items={waitlist} hostId={act.hostId} meId={me?.id} />
+              <WallSection title="请假" tone="muted" items={leave} hostId={act.hostId} meId={me?.id} />
             </>
           )}
         </View>
@@ -227,28 +337,43 @@ export default function Activity() {
 }
 
 /**
- * 三类名单区块：头像 + 昵称 + 人数，多于 8 人折叠为 +N。
+ * 三类名单区块：头像 + 昵称 + 人数，默认露出 8 格，超出折叠成 +N（可点开看全部再收起）。
+ * 真人头像可点，跳 TA 的战绩页；「+1 带人」的虚位影位没有真实用户，不可点。
  * 「+1 带人」在已报名/候补里按真实身位画虚位影位（与卡片「已报名 N」的身位口径一致）；
  * 请假不带 +1 入场，故只数本人。
  */
-function WallSection(props: { title: string; tone: 'success' | 'warn' | 'muted'; items: SignupVM[]; hostId: number }) {
-  const { title, tone, items, hostId } = props;
+function WallSection(props: {
+  title: string;
+  tone: 'success' | 'warn' | 'muted';
+  items: SignupVM[];
+  hostId: number;
+  meId?: number;
+}) {
+  const { title, tone, items, hostId, meId } = props;
+  const [expanded, setExpanded] = useState(false);
   if (items.length === 0) return null;
   const countGhost = tone !== 'muted'; // 请假名单不把 +1 计入场上身位
   type Cell =
-    | { key: string; ghost: false; s: SignupVM; host: boolean }
+    | { key: string; ghost: false; s: SignupVM; host: boolean; self: boolean }
     | { key: string; ghost: true; bringer: string };
   const cells: Cell[] = [];
   for (const s of items) {
-    cells.push({ key: `s-${s.id}`, ghost: false, s, host: s.user.id === hostId });
+    cells.push({
+      key: `s-${s.id}`,
+      ghost: false,
+      s,
+      host: s.user.id === hostId,
+      self: meId != null && s.user.id === meId,
+    });
     if (countGhost) {
       for (let i = 0; i < s.plusOne; i++) {
         cells.push({ key: `s-${s.id}-g${i}`, ghost: true, bringer: s.user.nickname });
       }
     }
   }
-  const MAX = 8;
-  const shown = cells.slice(0, MAX);
+  const foldable = cells.length > WALL_MAX;
+  const collapsed = foldable && !expanded;
+  const shown = collapsed ? cells.slice(0, WALL_MAX) : cells;
   const overflow = cells.length - shown.length;
   return (
     <View className="wall-sec">
@@ -266,17 +391,30 @@ function WallSection(props: { title: string; tone: 'success' | 'warn' | 'muted';
               <Text className="wall-sec__name wall-sec__name--ghost">{c.bringer}带</Text>
             </View>
           ) : (
-            <View key={c.key} className="wall-sec__item">
+            <View
+              key={c.key}
+              className={`wall-sec__item ${c.self ? 'wall-sec__item--me' : ''}`}
+              onClick={() => goPlayer(c.s.user.id)}
+            >
               <View className="wall-sec__av">
+                {/* ring 保持「局长」专用（白环）；「我」走绿环，两个身份别共用一个记号 */}
                 <Avatar name={c.s.user.nickname} src={c.s.user.avatarUrl} size={40} ring={c.host} />
               </View>
-              <Text className="wall-sec__name">{c.host ? `${c.s.user.nickname}·局长` : c.s.user.nickname}</Text>
+              <Text className={`wall-sec__name ${c.self ? 'wall-sec__name--me' : ''}`}>
+                {c.host ? `${c.s.user.nickname}·局长` : c.self ? `${c.s.user.nickname}·我` : c.s.user.nickname}
+              </Text>
             </View>
           ),
         )}
-        {overflow > 0 ? (
-          <View className="wall-sec__item">
+        {collapsed ? (
+          <View className="wall-sec__item" onClick={() => setExpanded(true)}>
             <View className="wall-sec__more">+{overflow}</View>
+            <Text className="wall-sec__name">查看全部</Text>
+          </View>
+        ) : null}
+        {foldable && expanded ? (
+          <View className="wall-sec__item" onClick={() => setExpanded(false)}>
+            <View className="wall-sec__more wall-sec__more--fold">收起</View>
             <Text className="wall-sec__name"> </Text>
           </View>
         ) : null}
@@ -355,9 +493,15 @@ function GuestActions(props: {
   full: boolean;
   busy: boolean;
   id: number;
+  /** 我在候补里排第几（1 起；0 = 不在候补名单里） */
+  waitRank: number;
+  /** 我在候补里带了几个人：带人时补位需要一次空出 1 + N 个位子 */
+  waitPlusOne: number;
   run: (fn: () => Promise<unknown>) => Promise<void>;
+  /** 首次报名前先补资料，再执行原动作 */
+  guard: (action: () => void) => void;
 }) {
-  const { act, mine, full, busy, id, run } = props;
+  const { act, mine, full, busy, id, waitRank, waitPlusOne, run, guard } = props;
   const cancelled = act.status === ActivityStatus.CANCELLED;
   const finished = act.status === ActivityStatus.FINISHED;
   const ongoing = act.status === ActivityStatus.ONGOING;
@@ -398,6 +542,10 @@ function GuestActions(props: {
   // 报名中
   if (mine === SignupStatus.SIGNED_UP) {
     const checkedIn = act.myCheckedIn ?? false;
+    const startTs = new Date(act.startAt).getTime();
+    // 距开打还早的时候，签到不该是页面上最大最绿的按钮：新人会当成「确认参加」点下去，
+    // 局长的签到页就直接显示这人到了。降级成次要样式，但仍可点（真有人提前到场热身）。
+    const soon = !Number.isFinite(startTs) || startTs - Date.now() <= CHECKIN_SOON_MS;
     return (
       <View className="act__bar act__bar--col">
         {/* 主操作：自助签到 */}
@@ -407,8 +555,16 @@ function GuestActions(props: {
             <Text className="act__checkin-txt">已到场签到 · 点此撤销</Text>
           </View>
         ) : (
-          <View className="act__bar-main">
-            <PrimaryButton text="我已到场 · 签到" disabled={busy} onClick={() => run(() => api.selfCheckin(id, true))} />
+          <View className="act__checkin-wrap">
+            <PrimaryButton
+              text="我已到场 · 签到"
+              variant={soon ? 'solid' : 'outline'}
+              disabled={busy}
+              onClick={() => run(() => api.selfCheckin(id, true))}
+            />
+            {!soon ? (
+              <Text className="act__checkin-tip">离开打还早，到球馆了再签；提前到场热身也可以先签</Text>
+            ) : null}
           </View>
         )}
         {/* 次操作 */}
@@ -429,10 +585,19 @@ function GuestActions(props: {
     );
   }
   if (mine === SignupStatus.WAITLIST) {
+    const ahead = waitRank > 1 ? waitRank - 1 : 0;
+    // 后端 autofill：有人取消/请假腾出名额时，候补队首会自动补进正选
+    let waitTip = '有人取消或请假腾出名额时会自动补位';
+    if (waitRank === 1 && waitPlusOne > 0)
+      // 别承诺做不到的事：只空出 1 个位子时，带人的队首补不进去，队列也不会跳过你去补后面的人
+      waitTip = `你排在候补第一个；你带了 ${waitPlusOne} 人，要一次空出 ${waitPlusOne + 1} 个位子才会自动补上`;
+    else if (waitRank === 1) waitTip = '你排在候补第一个，有人取消或请假就自动补上你';
+    else if (ahead > 0) waitTip = `前面还有 ${ahead} 人，他们取消或请假你就往前挪一位`;
     return (
-      <View className="act__bar">
-        <View className="act__tag-wrap">
-          <Tag text="候补中" tone="warn" />
+      <View className="act__bar act__bar--col">
+        <View className="act__wait">
+          <Tag text={waitRank > 0 ? `候补第 ${waitRank} 位` : '候补中'} tone="warn" />
+          <Text className="act__wait-tip">{waitTip}</Text>
         </View>
         <View className="act__bar-main">
           <PrimaryButton text="取消候补" variant="outline" disabled={busy} onClick={() => run(() => api.cancelSignup(id))} />
@@ -447,7 +612,8 @@ function GuestActions(props: {
           <Tag text="已请假" tone="muted" />
         </View>
         <View className="act__bar-main">
-          <PrimaryButton text="重新报名" disabled={busy} onClick={() => run(() => api.signup(id))} />
+          {/* 请假后回来仍是一次「进名单」，和首次报名走同一道补资料关卡 */}
+          <PrimaryButton text="重新报名" disabled={busy} onClick={() => guard(() => run(() => api.signup(id)))} />
         </View>
       </View>
     );
@@ -460,7 +626,7 @@ function GuestActions(props: {
         <PrimaryButton
           text={full ? '加入候补' : '立即报名'}
           disabled={busy}
-          onClick={() => run(() => api.signup(id))}
+          onClick={() => guard(() => run(() => api.signup(id)))}
         />
       </View>
     </View>

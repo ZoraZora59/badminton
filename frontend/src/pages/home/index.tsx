@@ -1,13 +1,13 @@
 import { Fragment, useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh, useShareAppMessage, useShareTimeline } from '@tarojs/taro';
-import { ActivityStatus, type ActivityVM, type UserStatsVM } from '@badminton/shared';
+import { ActivityStatus, SignupStatus, type ActivityVM, type UserStatsVM } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
 import { useUser } from '../../store/user';
 import { toastError } from '../../services/api';
 import { Avatar, Tag, Empty, Icon } from '../../components';
-import { fmtCardTime } from '../../utils/format';
+import { fmtCardTime, greetingText } from '../../utils/format';
 import { finishedDividerIndex, sortHomeActivities } from '../../utils/activity';
 import './index.scss';
 
@@ -50,12 +50,30 @@ export default function Home() {
   const shown = useMemo(() => sortHomeActivities(all), [all]);
   const dividerAt = finishedDividerIndex(shown);
 
+  /** 卡片右上角：这个「局」现在怎么样了（客观状态，和我无关） */
   const statusTag = (a: ActivityVM) => {
     if (a.status === ActivityStatus.SIGNUP)
       return a.signedUpCount >= a.capacity ? <Tag text="满员候补" tone="warn" /> : <Tag text="报名中" tone="success" />;
     if (a.status === ActivityStatus.ONGOING) return <Tag text="进行中" tone="success" />;
     if (a.status === ActivityStatus.CANCELLED) return <Tag text="已取消" tone="muted" />;
     return <Tag text="已结束" tone="muted" />;
+  };
+
+  /**
+   * 卡片时间/地点行首：「我」和这个局是什么关系（主观身份，和局的状态是两个维度）。
+   * 位置刻意和右上角状态标签错开——右上角说局怎么样了，这里说我在里面是什么身份；
+   * 文案统一带「我」字打头，即使配色偶尔撞上（候补/已结束）也不会读串。
+   * 配色：局长/已报名用右上角不会出现的 primary、accent 两个色，剩下两个复用
+   * warn（候补=需要留意）、muted（请假=淡出），语义上本来就同一色系。
+   * 首页列表只返回我建的或我报过名的局，所以正常每张卡都有一个；
+   * 老后端不吐这两个字段时退化成不显示，不影响其它信息。
+   */
+  const mineTag = (a: ActivityVM) => {
+    if (a.isHost ?? (user != null && a.hostId === user.id)) return <Tag text="我是局长" tone="primary" />;
+    if (a.mySignupStatus === SignupStatus.SIGNED_UP) return <Tag text="我已报名" tone="accent" />;
+    if (a.mySignupStatus === SignupStatus.WAITLIST) return <Tag text="我在候补" tone="warn" />;
+    if (a.mySignupStatus === SignupStatus.LEAVE) return <Tag text="我已请假" tone="muted" />;
+    return null;
   };
 
   return (
@@ -65,7 +83,7 @@ export default function Home() {
         <View className="home__statusbar" />
         <View className="home__greet">
           <View>
-            <Text className="home__hi">下午好，准备开打 🏸</Text>
+            <Text className="home__hi">{greetingText()} 🏸</Text>
             <Text className="home__title">我的球局</Text>
           </View>
         </View>
@@ -93,52 +111,56 @@ export default function Home() {
           {shown.length === 0 ? (
             <Empty text="这里还没有球局" hint="点右下角 + 发起新局，分享给球友一起打" />
           ) : (
-            shown.map((a, idx) => (
-              <Fragment key={a.id}>
-                {idx === dividerAt ? (
-                  <View className="home__sep">
-                    <View className="home__sep-line" />
-                    <Text className="home__sep-txt">已结束</Text>
-                    <View className="home__sep-line" />
-                  </View>
-                ) : null}
-                <View className="card" onClick={() => Taro.navigateTo({ url: `/pages/activity/index?id=${a.id}` })}>
-                  <View className="card__top">
-                    <Text className="card__title">{a.title}</Text>
-                    {statusTag(a)}
-                  </View>
-                  <View className="card__meta">
-                    <View className="card__meta-item">
-                      <Icon name="clock" size={13} color="#80878f" />
-                      <Text className="card__meta-txt num">{fmtCardTime(a.startAt)}</Text>
+            shown.map((a, idx) => {
+              const mine = mineTag(a);
+              return (
+                <Fragment key={a.id}>
+                  {idx === dividerAt ? (
+                    <View className="home__sep">
+                      <View className="home__sep-line" />
+                      <Text className="home__sep-txt">已结束</Text>
+                      <View className="home__sep-line" />
                     </View>
-                    <View className="card__meta-item">
-                      <Icon name="pin" size={13} color="#80878f" />
-                      <Text className="card__meta-txt">{a.venue} · {a.courtCount} 片</Text>
+                  ) : null}
+                  <View className="card" onClick={() => Taro.navigateTo({ url: `/pages/activity/index?id=${a.id}` })}>
+                    <View className="card__top">
+                      <Text className="card__title">{a.title}</Text>
+                      {statusTag(a)}
                     </View>
-                  </View>
-                  <View className="card__bottom">
-                    <View className="card__wall">
-                      {a.members.slice(0, 4).map((m, i) => (
-                        <View key={m.id} className="card__wall-item" style={{ marginLeft: i === 0 ? 0 : '-9px', zIndex: 10 - i }}>
-                          <Avatar name={m.nickname} src={m.avatarUrl} size={28} ring />
-                        </View>
-                      ))}
-                      {a.signedUpCount > 4 ? <View className="card__more">+{a.signedUpCount - 4}</View> : null}
-                    </View>
-                    <View className="card__progress">
-                      <View className="card__bar">
-                        <View className="card__bar-fill" style={{ width: `${Math.min(100, Math.round((a.signedUpCount / a.capacity) * 100))}%` }} />
+                    <View className="card__meta">
+                      {mine ? <View className="card__mine">{mine}</View> : null}
+                      <View className="card__meta-item">
+                        <Icon name="clock" size={13} color="#80878f" />
+                        <Text className="card__meta-txt num">{fmtCardTime(a.startAt)}</Text>
                       </View>
-                      <Text className="card__count num">
-                        {a.signedUpCount}/{a.capacity}
-                        {a.waitlistCount > 0 ? ` · 候补 ${a.waitlistCount}` : ''}
-                      </Text>
+                      <View className="card__meta-item">
+                        <Icon name="pin" size={13} color="#80878f" />
+                        <Text className="card__meta-txt">{a.venue} · {a.courtCount} 片</Text>
+                      </View>
+                    </View>
+                    <View className="card__bottom">
+                      <View className="card__wall">
+                        {a.members.slice(0, 4).map((m, i) => (
+                          <View key={m.id} className="card__wall-item" style={{ marginLeft: i === 0 ? 0 : '-9px', zIndex: 10 - i }}>
+                            <Avatar name={m.nickname} src={m.avatarUrl} size={28} ring />
+                          </View>
+                        ))}
+                        {a.signedUpCount > 4 ? <View className="card__more">+{a.signedUpCount - 4}</View> : null}
+                      </View>
+                      <View className="card__progress">
+                        <View className="card__bar">
+                          <View className="card__bar-fill" style={{ width: `${Math.min(100, Math.round((a.signedUpCount / a.capacity) * 100))}%` }} />
+                        </View>
+                        <Text className="card__count num">
+                          {a.signedUpCount}/{a.capacity}
+                          {a.waitlistCount > 0 ? ` · 候补 ${a.waitlistCount}` : ''}
+                        </Text>
+                      </View>
                     </View>
                   </View>
-                </View>
-              </Fragment>
-            ))
+                </Fragment>
+              );
+            })
           )}
           <View className="home__list-pad" />
         </ScrollView>

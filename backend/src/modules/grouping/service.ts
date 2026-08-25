@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import type { BoardVM, GroupingPreviewReq, GroupingScheduleVM, GroupingSettings, ParticipantVM } from '@badminton/shared';
-import { ActivityStatus, GroupMode, PlayType, RotationKind, Team, levelWeight } from '@badminton/shared';
+import { ActivityStatus, GroupMode, MatchStatus, PlayType, RotationKind, Team, levelWeight } from '@badminton/shared';
 import { Errors } from '../../lib/errors';
 import { toParticipantVM } from '../checkin/mapper';
 import { getBoard } from '../matches/service';
@@ -58,7 +58,11 @@ export async function previewGrouping(
   return engineToScheduleVM(schedule, settings, pmap);
 }
 
-/** 确认开打：落库 Round/Match/MatchPlayer，活动转 ONGOING（重新确认会覆盖旧赛程） */
+/**
+ * 确认开打：落库 Round/Match/MatchPlayer，活动转 ONGOING。
+ * 重新确认默认覆盖旧赛程；但**已经记了分的场次不能被覆盖**——
+ * Match 对 Round 是 onDelete: Cascade，删旧 Round 会把已打完的比分一起带走（数据丢失）。
+ */
 export async function confirmGrouping(
   prisma: PrismaClient,
   activityId: number,
@@ -70,6 +74,16 @@ export async function confirmGrouping(
   if (activity.hostId !== hostId) throw Errors.forbidden('仅局长可确认分组');
 
   await prisma.$transaction(async (tx) => {
+    // 守卫放在事务内、删除之前：与 deleteMany 同一把事务，避免「查完到删之间有人刚记完分」。
+    // 只拦「已经有比分」这一种情况——开打后一局都没打完就重排阵容是合理需求，继续放行。
+    const scoredCount = await tx.match.count({
+      where: { round: { activityId }, status: MatchStatus.FINISHED },
+    });
+    if (scoredCount > 0) {
+      throw Errors.conflict(
+        `本场已经记了 ${scoredCount} 局比分，重新分组会把这些成绩清空。想调整阵容，请在对阵看板上换人。`,
+      );
+    }
     // 覆盖旧赛程
     await tx.round.deleteMany({ where: { activityId } });
     for (const r of schedule.rounds) {

@@ -680,3 +680,160 @@ describe('G5 开打后的状态机与 Guest/分组守卫', () => {
     await app.prisma.activity.deleteMany({ where: { id: aid } });
   });
 });
+describe('G6 已记分的赛程不可被重新分组覆盖', () => {
+  // Match 对 Round 是 onDelete: Cascade，旧实现里再次 confirm 会先 deleteMany(Round)，
+  // 把已经打完记好的比分一起级联删掉——这是数据丢失级别的问题，这里把守卫钉死
+  it('confirm → 记分 → 再次 confirm 返回 409，且已记的比分原样还在', async () => {
+    const host = await login(`t${RUN}_g6_host`);
+
+    const created = await api('POST', '/api/activities', {
+      token: host.token,
+      body: activityPayload('已记分守卫局', { playType: PlayType.SINGLES }),
+    });
+    const aid = created.body.data.id;
+
+    // 单打 2 人即可开打：局长自助签到 + 1 名临时球友
+    await api('POST', `/api/activities/${aid}/checkin/me`, { token: host.token, body: {} });
+    await api('POST', `/api/activities/${aid}/participants`, {
+      token: host.token,
+      body: { guestName: '记分小临', level: SkillLevel.L3 },
+    });
+    const parts = (await api('GET', `/api/activities/${aid}/participants`, { token: host.token })).body.data;
+    expect(parts.length).toBe(2);
+
+    const previewBody = {
+      participantIds: parts.map((p: any) => p.id),
+      playType: PlayType.SINGLES,
+      mode: GroupMode.BALANCED,
+      courtCount: 1,
+      rounds: 1,
+      seed: 9,
+    };
+    const preview = await api('POST', `/api/activities/${aid}/grouping/preview`, { token: host.token, body: previewBody });
+    expect(preview.body.code).toBe(0);
+    const schedule = preview.body.data;
+
+    const confirm = await api('POST', `/api/activities/${aid}/grouping/confirm`, { token: host.token, body: { schedule } });
+    expect(confirm.body.code).toBe(0);
+    const matchId = confirm.body.data.rounds[0].matches[0].id;
+
+    // 打完一局并记分
+    const score = await api('POST', `/api/matches/${matchId}/score`, {
+      token: host.token,
+      body: { scoreA: 21, scoreB: 15 },
+    });
+    expect(score.body.code).toBe(0);
+    expect(score.body.data.status).toBe(MatchStatus.FINISHED);
+
+    // 再次 confirm → 409：有比分了就不许覆盖
+    const reconfirm = await api('POST', `/api/activities/${aid}/grouping/confirm`, { token: host.token, body: { schedule } });
+    expect(reconfirm.status).toBe(409);
+    expect(reconfirm.body.message).toContain('比分');
+
+    // 重点断言：比分没被删掉——同一条 match 还在，分数/胜负/状态原样
+    const kept = await app.prisma.match.findUnique({ where: { id: matchId } });
+    expect(kept).not.toBeNull();
+    expect(kept!.scoreA).toBe(21);
+    expect(kept!.scoreB).toBe(15);
+    expect(kept!.winner).toBe(Team.A);
+    expect(kept!.status).toBe(MatchStatus.FINISHED);
+
+    // 整个赛程也没被清掉（事务整体回滚），看板仍是同一条对局
+    const board = (await api('GET', `/api/activities/${aid}/board`, { token: host.token })).body.data;
+    expect(board.rounds.length).toBe(1);
+    expect(board.rounds[0].matches[0].id).toBe(matchId);
+
+    await app.prisma.activity.deleteMany({ where: { id: aid } });
+  });
+
+  // 守卫必须是窄的：开打后一局都还没打完就重排阵容，是合理需求，不能被上面的 409 误伤
+  it('开打后尚无任何比分时，再次 confirm 仍按覆盖语义放行', async () => {
+    const host = await login(`t${RUN}_g6b_host`);
+
+    const created = await api('POST', '/api/activities', {
+      token: host.token,
+      body: activityPayload('未记分重排局', { playType: PlayType.SINGLES }),
+    });
+    const aid = created.body.data.id;
+
+    await api('POST', `/api/activities/${aid}/checkin/me`, { token: host.token, body: {} });
+    await api('POST', `/api/activities/${aid}/participants`, {
+      token: host.token,
+      body: { guestName: '重排小临', level: SkillLevel.L3 },
+    });
+    const parts = (await api('GET', `/api/activities/${aid}/participants`, { token: host.token })).body.data;
+    const previewBody = {
+      participantIds: parts.map((p: any) => p.id),
+      playType: PlayType.SINGLES,
+      mode: GroupMode.BALANCED,
+      courtCount: 1,
+      rounds: 1,
+      seed: 11,
+    };
+    const schedule = (await api('POST', `/api/activities/${aid}/grouping/preview`, { token: host.token, body: previewBody }))
+      .body.data;
+
+    const first = await api('POST', `/api/activities/${aid}/grouping/confirm`, { token: host.token, body: { schedule } });
+    expect(first.body.code).toBe(0);
+    const firstMatchId = first.body.data.rounds[0].matches[0].id;
+
+    const again = await api('POST', `/api/activities/${aid}/grouping/confirm`, { token: host.token, body: { schedule } });
+    expect(again.body.code).toBe(0);
+    expect(again.body.data.status).toBe(ActivityStatus.ONGOING);
+    expect(again.body.data.rounds[0].matches[0].id).not.toBe(firstMatchId);
+
+    await app.prisma.activity.deleteMany({ where: { id: aid } });
+  });
+});
+
+describe('G7 僵尸局惰性收尾：打完没人点「结束活动」也会自己落到已结束', () => {
+  it('endAt 过去足够久的 ONGOING → 读取时自动 FINISHED 且库里真的改了；缓冲期内 / endAt 为空的一律不动', async () => {
+    const host = await login(`t${RUN}_g7_host`);
+    const HOUR = 60 * 60 * 1000;
+    const ids: number[] = [];
+
+    // 直接落库造「进行中 + 指定结束时间」的现场：走接口没法把活动摆到过去
+    const mk = async (title: string, endAt: Date | null) => {
+      const r = await api('POST', '/api/activities', { token: host.token, body: activityPayload(title) });
+      const id = r.body.data.id;
+      ids.push(id);
+      await app.prisma.activity.update({ where: { id }, data: { status: ActivityStatus.ONGOING, endAt } });
+      return id;
+    };
+
+    const staleDetail = await mk('僵尸局-详情', new Date(Date.now() - 30 * HOUR));
+    const staleList = await mk('僵尸局-列表', new Date(Date.now() - 30 * HOUR));
+    const justEnded = await mk('刚打完还没收尾', new Date(Date.now() - 1 * HOUR));
+    const noEndAt = await mk('没填结束时间', null);
+
+    // 详情读取即收尾
+    const detail = await api('GET', `/api/activities/${staleDetail}`, { token: host.token });
+    expect(detail.body.data.status).toBe(ActivityStatus.FINISHED);
+    // 关键：库里真的变了，不是只在返回值上做了粉饰
+    expect((await app.prisma.activity.findUnique({ where: { id: staleDetail } }))!.status).toBe(
+      ActivityStatus.FINISHED,
+    );
+    // 幂等：再读一次不报错、状态不反复横跳
+    const detailAgain = await api('GET', `/api/activities/${staleDetail}`, { token: host.token });
+    expect(detailAgain.body.data.status).toBe(ActivityStatus.FINISHED);
+
+    // 缓冲期内的、以及没填结束时间的历史数据，一律不动
+    expect((await api('GET', `/api/activities/${justEnded}`, { token: host.token })).body.data.status).toBe(
+      ActivityStatus.ONGOING,
+    );
+    expect((await api('GET', `/api/activities/${noEndAt}`, { token: host.token })).body.data.status).toBe(
+      ActivityStatus.ONGOING,
+    );
+    expect((await app.prisma.activity.findUnique({ where: { id: noEndAt } }))!.status).toBe(ActivityStatus.ONGOING);
+
+    // 列表口径与详情一致：staleList 从没被详情接口读过，只靠 listActivities 收尾
+    const list = (await api('GET', '/api/activities', { token: host.token })).body.data;
+    const pick = (id: number) => list.find((a: any) => a.id === id);
+    expect(pick(staleList).status).toBe(ActivityStatus.FINISHED);
+    expect((await app.prisma.activity.findUnique({ where: { id: staleList } }))!.status).toBe(ActivityStatus.FINISHED);
+    expect(pick(justEnded).status).toBe(ActivityStatus.ONGOING);
+    expect(pick(noEndAt).status).toBe(ActivityStatus.ONGOING);
+
+    await app.prisma.activity.deleteMany({ where: { id: { in: ids } } });
+  });
+});

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { View, Text, Input, Textarea, Picker, Switch } from '@tarojs/components';
 import Taro, { useRouter, useDidShow } from '@tarojs/taro';
-import { PlayType, type CreateActivityReq } from '@badminton/shared';
+import { PlayType, type ActivityVM, type CreateActivityReq } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { ensureLogin } from '../../services/auth';
 import { toastError } from '../../services/api';
@@ -40,6 +40,16 @@ function nextSaturday(): string {
   return `${y}-${m}-${d}`;
 }
 
+/**
+ * 备注是否被红线护栏吃掉了内容。cleanRemark 会顺手把标点归一化（小句用「，」重连、补句号），
+ * 所以不能直接比字符串，只比对去掉标点空白后的正文——正文变短 = 有小句被整句丢弃。
+ */
+function remarkFiltered(text: string): boolean {
+  const bare = (v: string) => v.replace(/[\s，,。；;、]/g, '');
+  const raw = bare(text);
+  return raw.length > 0 && bare(cleanRemark(text)) !== raw;
+}
+
 export default function Create() {
   const defDate = useMemo(nextSaturday, []);
   const router = useRouter();
@@ -62,9 +72,31 @@ export default function Create() {
   const [submitting, setSubmitting] = useState(false);
   // 编辑模式：首次进入拉取活动并回填表单（仅一次，避免覆盖用户改动）
   const [loaded, setLoaded] = useState(!isEdit);
+  // 新建模式：我上一场自己开的局，用来做「沿用上次」入口（拉不到就不渲染）
+  const [lastAct, setLastAct] = useState<ActivityVM | null>(null);
+  const [lastProbed, setLastProbed] = useState(false);
+  // 备注里有小句触到不碰钱红线：只提示，不阻断保存
+  const [remarkHit, setRemarkHit] = useState(false);
 
   useDidShow(() => {
-    if (!isEdit) return;
+    if (!isEdit) {
+      // 新建：探一次「我自己开的最近一场」，纯便利功能，失败静默降级，绝不挡住建局
+      if (lastProbed) return;
+      setLastProbed(true);
+      void (async () => {
+        try {
+          await ensureLogin();
+          const list = await api.listActivities();
+          const mine = list
+            .filter((a) => a.isHost)
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+          if (mine.length > 0) setLastAct(mine[0]);
+        } catch {
+          // 拉不到就不显示入口
+        }
+      })();
+      return;
+    }
     if (loaded) return;
     void (async () => {
       try {
@@ -89,7 +121,10 @@ export default function Create() {
         setCapacity(a.capacity);
         setPlayType(a.playType);
         setMixedDoubles(a.mixedDoubles ?? false);
+        // 回填的是清洗后的版本：原文里被红线吃掉的小句已经不在了，这里补上和新建模式一致的提示，
+        // 否则局长看到的是被剪短的备注、还毫不知情，一保存就把原文永久覆盖
         setRemark(cleanRemark(a.remark));
+        setRemarkHit(remarkFiltered(a.remark ?? ''));
         setLoaded(true);
       } catch (e) {
         toastError(e);
@@ -109,6 +144,30 @@ export default function Create() {
 
   const step = (v: number, delta: number, min: number, max: number) =>
     Math.min(max, Math.max(min, v + delta));
+
+  /**
+   * 沿用上次：只带「每周都一样」的项（场馆/场地数/人数上限/玩法/混双/备注）。
+   * 日期时间不带——上一场是过去时间，带过来是错的，保持「下一个周六 19:00」的默认。
+   */
+  const reuseLast = () => {
+    if (!lastAct) return;
+    setVenue(lastAct.venue);
+    setCourtCount(lastAct.courtCount);
+    setCapacity(lastAct.capacity);
+    setPlayType(lastAct.playType);
+    setMixedDoubles(lastAct.playType === PlayType.DOUBLES && lastAct.mixedDoubles);
+    setRemark(cleanRemark(lastAct.remark));
+    setRemarkHit(false);
+    setLastAct(null); // 用过即收起，不再占位
+    Taro.showToast({ title: '已沿用上次球局', icon: 'success' });
+  };
+
+  // 备注失焦时对一遍展示层护栏：命中就说清楚「球友端看不到这句」，避免局长以为没保存住
+  const checkRemark = () => {
+    const hit = remarkFiltered(remark);
+    if (hit && !remarkHit) Taro.showToast({ title: '部分备注不会展示给球友', icon: 'none' });
+    setRemarkHit(hit);
+  };
 
   const submit = async () => {
     if (submitting) return;
@@ -188,6 +247,19 @@ export default function Create() {
   return (
     <PageFrame title={pageTitle} activeTab="home" footer={footerNode}>
       <View className="create__form">
+        {/* 沿用上次：周常局不用每次重打场馆名。只有我开过局时才出现 */}
+        {!isEdit && lastAct ? (
+          <View className="reuse" onClick={reuseLast}>
+            <View className="reuse__main">
+              <Text className="reuse__label">沿用上次</Text>
+              <Text className="reuse__desc">
+                {`${lastAct.venue} · ${lastAct.capacity} 人 · ${lastAct.courtCount} 片`}
+              </Text>
+            </View>
+            <Text className="reuse__btn">一键填入 ›</Text>
+          </View>
+        ) : null}
+
         {/* 活动标题 */}
         <View className="field">
           <Text className="field__label">活动标题</Text>
@@ -358,8 +430,14 @@ export default function Create() {
               placeholderClass="field__ph"
               maxlength={120}
               onInput={(e) => setRemark(e.detail.value)}
+              onBlur={checkRemark}
             />
           </View>
+          {remarkHit ? (
+            <Text className="field__note">
+              备注只展示和打球相关的内容，其余句子球友端看不到（不影响保存）
+            </Text>
+          ) : null}
         </View>
 
         <View className="create__pad" />

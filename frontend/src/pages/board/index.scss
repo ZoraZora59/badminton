@@ -39,6 +39,115 @@
   }
 }
 
+// 我的下一场：整晚问得最多的一句「我下轮打不打、几号场、跟谁」，做成全页最显眼的一张卡
+.mine {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  padding: 15px;
+  margin-bottom: 12px;
+  background: var(--grad-mvp);
+  box-shadow: 0 4px 14px rgba(11, 94, 52, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &__deco {
+    position: absolute;
+    right: -22px;
+    top: -22px;
+    width: 92px;
+    height: 92px;
+    border-radius: 50%;
+    background: var(--c-accent-soft);
+  }
+  &__label {
+    position: relative;
+    z-index: 1;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--c-accent);
+    letter-spacing: 0.5px;
+  }
+  &__title {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  &__round {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.88);
+    background: rgba(255, 255, 255, 0.16);
+    padding: 3px 9px;
+    border-radius: 8px;
+  }
+  &__court {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+  }
+  &__num {
+    font-size: 22px;
+    color: var(--c-accent);
+  }
+  &__lines {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  &__line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  &__line-k {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.62);
+  }
+  &__line-v {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  &__hint {
+    position: relative;
+    z-index: 1;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  &__btn {
+    position: relative;
+    z-index: 1;
+    margin-top: 4px;
+    height: 42px;
+    border-radius: var(--radius-btn);
+    background: var(--c-accent);
+    color: var(--c-primary-dark);
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:active {
+      opacity: 0.88;
+    }
+  }
+}
+
 // 轮次切换器
 .switcher {
   background: #fff;
@@ -133,6 +242,15 @@
     display: flex;
     align-items: center;
     gap: 6px;
+
+    // 「我」：加粗描绿 + 头像描环，不用在一屏名字里用眼睛找自己
+    &--me .court__player-name {
+      color: var(--c-primary);
+      font-weight: 700;
+    }
+    &--me .bm-avatar {
+      box-shadow: 0 0 0 2px var(--c-primary);
+    }
   }
   &__player-name {
     font-size: 12px;
@@ -154,6 +272,11 @@
   }
   &__stack-item {
     position: relative;
+
+    // 头像堆里只有脸没有名字，「我」把白环换成绿环
+    &--me .bm-avatar {
+      border-color: var(--c-primary);
+    }
   }
   &__score {
     font-size: 22px;
@@ -246,6 +369,11 @@
     font-weight: 600;
     color: #c0c8c3;
   }
+  // 赛程总览里的「我」（含轮空名单）
+  &__name--me {
+    font-weight: 700;
+    color: var(--c-primary);
+  }
   &__score {
     flex-shrink: 0;
     font-size: 12px;
@@ -288,5 +416,9 @@
   &__txt {
     font-size: 10px;
     color: var(--c-text-4);
+  }
+  &__me {
+    font-weight: 700;
+    color: var(--c-primary);
   }
 }

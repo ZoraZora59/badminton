@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cleanRemark, fmtRange, fmtCardTime } from '../src/utils/format';
+import { cleanRemark, fmtRange, fmtCardTime, greetingText } from '../src/utils/format';
 
 // ---------------------------------------------------------------------------
 // cleanRemark：「v1 不碰钱」红线在展示层的唯一防线。
@@ -80,12 +80,17 @@ describe('cleanRemark 红线护栏', () => {
 // 时间格式化：UTC ISO 输入 → 固定 +8（Asia/Shanghai）输出，不依赖设备时区。
 // ---------------------------------------------------------------------------
 describe('fmtCardTime / fmtRange 固定 +8 输出', () => {
-  it('fmtCardTime：不跨日（UTC 11:00 → 北京 19:00）', () => {
-    expect(fmtCardTime('2026-06-27T11:00:00.000Z')).toBe('周六 19:00');
+  // 卡片时间必须带月日：只报星期的话，「这周六」和「下周六」的局在首页长得一模一样。
+  it('fmtCardTime：不跨日（UTC 11:00 → 北京 6月27日 周六 19:00）', () => {
+    expect(fmtCardTime('2026-06-27T11:00:00.000Z')).toBe('6月27日 周六 19:00');
   });
 
-  it('fmtCardTime：跨日边界（UTC 周六 17:30 → 北京 周日 01:30）', () => {
-    expect(fmtCardTime('2026-06-27T17:30:00.000Z')).toBe('周日 01:30');
+  it('fmtCardTime：跨日边界（UTC 周六 17:30 → 北京 周日 01:30，月日也跟着跨到 28 日）', () => {
+    expect(fmtCardTime('2026-06-27T17:30:00.000Z')).toBe('6月28日 周日 01:30');
+  });
+
+  it('fmtCardTime：跨月跨年边界（UTC 12-31 16:30 → 北京 1月1日 周五 00:30）', () => {
+    expect(fmtCardTime('2026-12-31T16:30:00.000Z')).toBe('1月1日 周五 00:30');
   });
 
   it('fmtRange：不跨日（含结束时间）', () => {
@@ -107,5 +112,61 @@ describe('fmtCardTime / fmtRange 固定 +8 输出', () => {
 
   it('fmtRange：跨年边界（UTC 12-31 16:30 → 北京 1月1日 00:30）', () => {
     expect(fmtRange('2026-12-31T16:30:00.000Z')).toBe('1月1日 周五 00:30');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// greetingText：首页第一屏第一行字。同样固定 +8，不看设备时区——
+// 用本机时区判断的话，出国/改系统时区的用户早上八点会看到「晚上好」。
+// 入参用 UTC 时刻表达，注释里标出它对应的北京时间。
+// ---------------------------------------------------------------------------
+describe('greetingText 固定 +8 分档', () => {
+  /** 北京时间 h:mm（当天）对应的 UTC 时刻 */
+  const cnAt = (h: number, m = 0) =>
+    new Date(Date.UTC(2026, 5, 27, h - 8, m));
+
+  it('深夜档：北京 00:00 / 04:59 / 23:00 / 23:59', () => {
+    expect(greetingText(cnAt(0))).toBe('夜深了，明早再开打');
+    expect(greetingText(cnAt(4, 59))).toBe('夜深了，明早再开打');
+    expect(greetingText(cnAt(23))).toBe('夜深了，明早再开打');
+    expect(greetingText(cnAt(23, 59))).toBe('夜深了，明早再开打');
+  });
+
+  it('早上档：北京 05:00 / 08:59', () => {
+    expect(greetingText(cnAt(5))).toBe('早上好，热身走起');
+    expect(greetingText(cnAt(8, 59))).toBe('早上好，热身走起');
+  });
+
+  it('上午档：北京 09:00 / 10:59', () => {
+    expect(greetingText(cnAt(9))).toBe('上午好，约个下午局');
+    expect(greetingText(cnAt(10, 59))).toBe('上午好，约个下午局');
+  });
+
+  it('中午档：北京 11:00 / 12:59', () => {
+    expect(greetingText(cnAt(11))).toBe('中午好，记得补水');
+    expect(greetingText(cnAt(12, 59))).toBe('中午好，记得补水');
+  });
+
+  it('下午档：北京 13:00 / 17:59', () => {
+    expect(greetingText(cnAt(13))).toBe('下午好，准备开打');
+    expect(greetingText(cnAt(17, 59))).toBe('下午好，准备开打');
+  });
+
+  it('晚上档：北京 18:00 / 22:59', () => {
+    expect(greetingText(cnAt(18))).toBe('晚上好，球馆见');
+    expect(greetingText(cnAt(22, 59))).toBe('晚上好，球馆见');
+  });
+
+  it('跨日：UTC 当天 16:00 已是北京次日 00:00，按次日凌晨算', () => {
+    // Date.UTC(2026,5,27,16) → 北京 2026-06-28 00:00
+    expect(greetingText(new Date(Date.UTC(2026, 5, 27, 16)))).toBe('夜深了，明早再开打');
+    // 北京 08:00 = UTC 00:00：设备时区若被当成 UTC，会误判成「夜深了」
+    expect(greetingText(new Date(Date.UTC(2026, 5, 27, 0)))).toBe('早上好，热身走起');
+  });
+
+  it('不传参时用当前时间，返回非空文案（不含红线词）', () => {
+    const s = greetingText();
+    expect(s.length).toBeGreaterThan(0);
+    expect(cleanRemark(s)).not.toBe('');
   });
 });

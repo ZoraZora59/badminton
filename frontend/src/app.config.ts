@@ -10,6 +10,9 @@ export default defineAppConfig({
     'pages/board/index',
     'pages/scoring/index',
     'pages/summary/index',
+    // 只读战绩详情：与「战绩」tab 同一个组件，但挂非 tabBar 路由，
+    // 这样球局里点头像能 navigateTo 过去并正常返回（tabBar 页不允许 navigateTo）
+    'pages/player/index',
   ],
   window: {
     navigationBarTitleText: '羽毛球小助手',

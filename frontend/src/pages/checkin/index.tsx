@@ -36,6 +36,8 @@ export default function Checkin() {
   const [draft, setDraft] = useState<Record<number, Draft>>({});
   const [submitting, setSubmitting] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  // 本次会话里局长手动改过本场水平的 signupId：服务端 perGameLevel 仍为空，但不该再当作「默认值」提示
+  const [levelTouched, setLevelTouched] = useState<Record<number, boolean>>({});
 
   // 选水平弹层：正在编辑的 signupId（null = 关闭）
   const [sheetFor, setSheetFor] = useState<number | null>(null);
@@ -76,6 +78,13 @@ export default function Checkin() {
   const allChecked = roster.length > 0 && checkedCount === roster.length;
   // 实到人数 = 勾选的正选 + 已加临时球友（Guest 默认到场）
   const goCount = checkedCount + guests.length;
+  /**
+   * 「本场水平还没确认过」的判定只认服务端的 perGameLevel：为空说明局长从没为这人定过本场水平，
+   * 行上显示的是报名人默认值（从群链接直接报名的人常年停在默认档，会把智能平衡拉成随机分组）。
+   * 本地 draft 里存的是回落后的值，不能用来判断，只有本次在弹层里改过才算确认。
+   */
+  const isDefaultLevel = (s: SignupVM) => s.perGameLevel == null && !levelTouched[s.id];
+  const defaultLevelCount = roster.filter(isDefaultLevel).length;
 
   const toggle = (signupId: number) => {
     setDraft((d) => {
@@ -98,11 +107,15 @@ export default function Checkin() {
 
   const setLevel = (level: SkillLevel) => {
     if (sheetFor == null) return;
-    setDraft((d) => {
-      const cur = d[sheetFor];
-      if (!cur) return d;
-      return { ...d, [sheetFor]: { ...cur, level } };
-    });
+    // 草稿里没有这行 = 这次选择根本存不下来，那 touched 也不能置位：
+    // 否则行上的「默认」小标消失了，confirm 时却没有值可回传，等于把「已确认」写在脸上却没存。
+    const cur = draft[sheetFor];
+    if (!cur) {
+      setSheetFor(null);
+      return;
+    }
+    setDraft((d) => ({ ...d, [sheetFor]: { ...cur, level } }));
+    setLevelTouched((t) => ({ ...t, [sheetFor]: true }));
     setSheetFor(null);
   };
 
@@ -171,14 +184,27 @@ export default function Checkin() {
 
   const confirm = async () => {
     if (submitting) return;
+    // 0 人进分组只会看到一页空名单，这里挡住并说明原因（底部按钮的置灰态此前只是样式）
+    if (goCount === 0) {
+      Taro.showToast({ title: '还没有人签到，先勾选实到球友', icon: 'none' });
+      return;
+    }
     setSubmitting(true);
     try {
       await api.batchCheckin(id, {
-        items: signups.map((s) => ({
-          signupId: s.id,
-          checkedIn: draft[s.id]?.checkedIn ?? s.checkedIn,
-          perGameLevel: draft[s.id]?.level ?? s.perGameLevel ?? s.user.defaultLevel ?? DEFAULT_LEVEL,
-        })),
+        items: signups.map((s) => {
+          /**
+           * 只回传「确认过」的本场水平：本次在弹层里改过，或服务端本来就有值。
+           * 没确认过的不传（后端该字段可选，不传即保留原值 null），分组时照样回落到
+           * 报名人默认水平，结果不变；但「这人的水平还是系统默认」的信号能留到下次进签到页。
+           */
+          const confirmed = levelTouched[s.id] ? draft[s.id]?.level : s.perGameLevel ?? undefined;
+          return {
+            signupId: s.id,
+            checkedIn: draft[s.id]?.checkedIn ?? s.checkedIn,
+            ...(confirmed ? { perGameLevel: confirmed } : {}),
+          };
+        }),
       });
       Taro.navigateTo({ url: `/pages/grouping/index?id=${id}` });
     } catch (e) {
@@ -193,6 +219,7 @@ export default function Checkin() {
     const checked = !!draft[s.id]?.checkedIn;
     const level = draft[s.id]?.level ?? s.perGameLevel ?? s.user.defaultLevel ?? DEFAULT_LEVEL;
     const isHost = activity != null && s.user.id === activity.hostId;
+    const guessed = isDefaultLevel(s);
 
     return (
       <View key={s.id} className={`ck-row ${isLeave ? 'ck-row--off' : ''}`}>
@@ -216,8 +243,13 @@ export default function Checkin() {
         {isLeave ? (
           <Tag text="请假" tone="warn" />
         ) : (
-          <View className="ck-row__lv" onClick={() => setSheetFor(s.id)}>
-            {levelLabel(level)} <Text className="ck-row__caret">▾</Text>
+          <View
+            className={`ck-row__lv ${guessed ? 'ck-row__lv--guess' : ''}`}
+            onClick={() => setSheetFor(s.id)}
+          >
+            {levelLabel(level)}
+            {guessed ? <Text className="ck-row__lv-def">默认</Text> : null}
+            <Text className="ck-row__caret">▾</Text>
           </View>
         )}
       </View>
@@ -245,7 +277,8 @@ export default function Checkin() {
           </Text>
         </View>
         <View className="ck-row__lv" onClick={openEdit}>
-          {levelLabel(g.level)} <Text className="ck-row__caret">▾</Text>
+          {levelLabel(g.level)}
+          <Text className="ck-row__caret">▾</Text>
         </View>
         <View className="ck-row__del" onClick={() => removeGuestRow(g)}>
           ✕
@@ -314,6 +347,12 @@ export default function Checkin() {
             </Text>
           ) : null}
         </View>
+
+        {!empty && defaultLevelCount > 0 ? (
+          <Text className="ck__tip">
+            <Text className="ck__tip-n num">{defaultLevelCount}</Text> 人还是默认水平，点一下改成本场水平，分组更均衡
+          </Text>
+        ) : null}
 
         {empty ? (
           <Empty text="还没有报名的球友" hint="先回活动详情邀请好友报名" />

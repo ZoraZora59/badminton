@@ -1,6 +1,12 @@
-import { useState, useCallback, useMemo } from 'react';
+import { Fragment, useState, useCallback, useMemo } from 'react';
 import { View, Text } from '@tarojs/components';
-import Taro, { useRouter, useDidShow, useShareAppMessage, useShareTimeline } from '@tarojs/taro';
+import Taro, {
+  useRouter,
+  useDidShow,
+  usePullDownRefresh,
+  useShareAppMessage,
+  useShareTimeline,
+} from '@tarojs/taro';
 import {
   MatchStatus,
   Team,
@@ -11,21 +17,37 @@ import {
 } from '@badminton/shared';
 import { api } from '../../services/endpoints';
 import { toastError } from '../../services/api';
+import { useUser } from '../../store/user';
 import { Avatar, Tag, PrimaryButton, Empty, PageFrame } from '../../components';
 import './index.scss';
+
+/** 「我的下一场」的三种形态；我不在这场比赛里（围观者 / 只组局不打的局长）时为 null */
+type MyNextVM =
+  | { kind: 'match'; roundIdx: number; match: MatchVM; partners: ParticipantVM[]; opponents: ParticipantVM[] }
+  | { kind: 'bye'; roundIdx: number; next: { roundIdx: number; courtNo: number } | null }
+  | { kind: 'done'; played: number }
+  | null;
 
 export default function Board() {
   const router = useRouter();
   const id = Number(router.params.id);
+  const user = useUser();
 
   const [board, setBoard] = useState<BoardVM | null>(null);
+  const [roster, setRoster] = useState<ParticipantVM[]>([]);
   const [roundIdx, setRoundIdx] = useState(0);
   const [touched, setTouched] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const b = await api.getBoard(id);
+      // 花名册要单独取：全程轮空的人不出现在任何对阵里，光靠 board 反查不出「我」是谁。
+      // 它只服务于「我的下一场」和轮空名字，拉不到就降级回对阵反查，绝不能让看板本身打不开。
+      const [b, ps] = await Promise.all([
+        api.getBoard(id),
+        api.listParticipants(id).catch(() => [] as ParticipantVM[]),
+      ]);
       setBoard(b);
+      setRoster(ps);
       // 首次进入定位到当前轮；返回刷新时保留用户已切换的轮次
       setRoundIdx((prev) => (touched ? Math.min(prev, b.rounds.length - 1) : Math.max(0, b.currentRound - 1)));
     } catch (e) {
@@ -35,6 +57,12 @@ export default function Board() {
 
   useDidShow(() => {
     load();
+  });
+
+  // 三片场地并行，别人计完分这边不会动：下拉即可刷新，不用退出去再进来
+  usePullDownRefresh(async () => {
+    await load();
+    Taro.stopPullDownRefresh();
   });
 
   // 对阵看板可围观：转发/朋友圈带上活动 id，好友点开直接看排兵
@@ -55,8 +83,80 @@ export default function Board() {
         [...mt.teamA.participants, ...mt.teamB.participants].forEach((p) => m.set(p.id, p));
       }),
     );
+    // 轮空的人不在任何对阵里，没有花名册兜底，byeNames 只能显示成「球友」
+    roster.forEach((p) => {
+      if (!m.has(p.id)) m.set(p.id, p);
+    });
     return m;
-  }, [board]);
+  }, [board, roster]);
+
+  /**
+   * 「我」在本场的 participantId。优先查花名册——全程轮空的人（单轮赛程且人数超过场地容量时必现）
+   * 压根不出现在任何对阵里，只扫 matches 会把他当成围观者，而他恰恰是最需要知道自己上不上场的人。
+   * 花名册拉不到时退回对阵反查，至少上过场的人不受影响。Guest 的 userId 为 null，不会误命中。
+   */
+  const myPid = useMemo(() => {
+    if (!user) return null;
+    const inRoster = roster.find((p) => p.userId === user.id);
+    if (inRoster) return inRoster.id;
+    if (!board) return null;
+    for (const r of board.rounds) {
+      for (const mt of r.matches) {
+        const hit = [...mt.teamA.participants, ...mt.teamB.participants].find((p) => p.userId === user.id);
+        if (hit) return hit.id;
+      }
+    }
+    return null;
+  }, [board, roster, user]);
+
+  /**
+   * 「我下轮打不打、几号场、跟谁」——整晚被问得最多的一句话。
+   * 一次扫描同时收三样：已打完的场次、第一场未结束的我方对局、第一次轮空。
+   * 轮空排在真实对局之前时给轮空卡，但必须把后面那场一起带上：
+   * 卡片叫「我的下一场」，只说「这轮歇着」等于把问题答了一半。
+   */
+  const myNext = useMemo<MyNextVM>(() => {
+    if (!board || myPid == null) return null;
+    let played = 0;
+    let firstMatch: Extract<MyNextVM, { kind: 'match' }> | null = null;
+    let firstByeIdx = -1;
+    for (let i = 0; i < board.rounds.length; i += 1) {
+      const r = board.rounds[i];
+      const mine = r.matches.find((mt) =>
+        [...mt.teamA.participants, ...mt.teamB.participants].some((p) => p.id === myPid),
+      );
+      if (mine && mine.status === MatchStatus.FINISHED) {
+        played += 1;
+        continue;
+      }
+      if (mine) {
+        if (!firstMatch) {
+          const inA = mine.teamA.participants.some((p) => p.id === myPid);
+          const ours = inA ? mine.teamA.participants : mine.teamB.participants;
+          const theirs = inA ? mine.teamB.participants : mine.teamA.participants;
+          firstMatch = {
+            kind: 'match',
+            roundIdx: i,
+            match: mine,
+            partners: ours.filter((p) => p.id !== myPid),
+            opponents: theirs,
+          };
+        }
+        continue;
+      }
+      // 本轮没我的对局：这一轮还没打完 + 我在轮空名单里 = 先歇一轮
+      const roundDone = r.matches.length > 0 && r.matches.every((mt) => mt.status === MatchStatus.FINISHED);
+      if (firstByeIdx < 0 && !roundDone && r.byeParticipantIds.includes(myPid)) firstByeIdx = i;
+    }
+    if (firstByeIdx >= 0 && (!firstMatch || firstByeIdx < firstMatch.roundIdx)) {
+      return {
+        kind: 'bye',
+        roundIdx: firstByeIdx,
+        next: firstMatch ? { roundIdx: firstMatch.roundIdx, courtNo: firstMatch.match.courtNo } : null,
+      };
+    }
+    return firstMatch ?? { kind: 'done', played };
+  }, [board, myPid]);
 
   if (!board) {
     return (
@@ -80,8 +180,12 @@ export default function Board() {
     0,
   );
 
-  const byeNames =
-    round?.byeParticipantIds.map((pid) => nameMap.get(pid)?.displayName ?? '球友').filter(Boolean) ?? [];
+  const byeList =
+    round?.byeParticipantIds.map((pid) => ({ pid, name: nameMap.get(pid)?.displayName ?? '球友' })) ?? [];
+
+  /** 是不是「我」——我不在参赛名单里时恒为 false，全页高亮自动消失 */
+  const isMe = (p: ParticipantVM) => myPid != null && p.id === myPid;
+  const isMePid = (pid: number) => myPid != null && pid === myPid;
 
   const goPrev = () => {
     if (!hasPrev) return;
@@ -92,6 +196,10 @@ export default function Board() {
     if (!hasNext) return;
     setTouched(true);
     setRoundIdx((i) => i + 1);
+  };
+  const jumpRound = (i: number) => {
+    setTouched(true);
+    setRoundIdx(i);
   };
 
   const enterScoring = (m: MatchVM) => {
@@ -104,7 +212,7 @@ export default function Board() {
   const renderTeam = (participants: ParticipantVM[], align: 'left' | 'right') => (
     <View className={`court__team court__team--${align}`}>
       {participants.map((p) => (
-        <View key={p.id} className="court__player">
+        <View key={p.id} className={`court__player ${isMe(p) ? 'court__player--me' : ''}`}>
           {align === 'left' ? (
             <>
               <Avatar name={p.displayName} src={p.avatarUrl} size={26} />
@@ -123,13 +231,29 @@ export default function Board() {
 
   const renderStack = (participants: ParticipantVM[]) => (
     <View className="result__stack">
-      {participants.map((p, i) => (
-        <View key={p.id} className="result__stack-item" style={{ marginLeft: i === 0 ? 0 : '-7px', zIndex: 9 - i }}>
-          <Avatar name={p.displayName} src={p.avatarUrl} size={24} ring />
-        </View>
-      ))}
+      {participants.map((p, i) => {
+        const me = isMe(p);
+        return (
+          <View
+            key={p.id}
+            className={`result__stack-item ${me ? 'result__stack-item--me' : ''}`}
+            style={{ marginLeft: i === 0 ? 0 : '-7px', zIndex: me ? 10 : 9 - i }}
+          >
+            <Avatar name={p.displayName} src={p.avatarUrl} size={24} ring />
+          </View>
+        );
+      })}
     </View>
   );
+
+  /** 赛程总览里的名字串：拆成节点渲染，才能把「我」单独标出来 */
+  const renderSchedNames = (participants: ParticipantVM[]) =>
+    participants.map((p, i) => (
+      <Fragment key={p.id}>
+        {i > 0 ? '/' : ''}
+        <Text className={isMe(p) ? 'sched__name--me' : ''}>{p.displayName}</Text>
+      </Fragment>
+    ));
 
   const switcherNode = (
     <View className="switcher">
@@ -145,10 +269,89 @@ export default function Board() {
     </View>
   );
 
+  // 「我的下一场」：整晚问得最多的一句话，放在页面最上面，我不在名单里就整块不渲染
+  const mineNode = (() => {
+    if (!myNext) return null;
+    if (myNext.kind === 'done') {
+      if (myNext.played <= 0) return null;
+      return (
+        <View className="mine">
+          <View className="mine__deco" />
+          <Text className="mine__label">我的今天</Text>
+          <View className="mine__title">
+            <Text className="mine__court">
+              你今天打了 <Text className="mine__num num">{myNext.played}</Text> 场
+            </Text>
+          </View>
+          <Text className="mine__hint">你的对局都打完了</Text>
+        </View>
+      );
+    }
+    if (myNext.kind === 'bye') {
+      return (
+        <View className="mine">
+          <View className="mine__deco" />
+          <Text className="mine__label">我的下一场</Text>
+          <View className="mine__title">
+            <Text className="mine__round" onClick={() => jumpRound(myNext.roundIdx)}>
+              第 {myNext.roundIdx + 1} 轮 ›
+            </Text>
+            <Text className="mine__court">轮空休息</Text>
+          </View>
+          {myNext.next ? (
+            <View className="mine__lines">
+              <View className="mine__line">
+                <Text className="mine__line-k">下一场</Text>
+                <Text
+                  className="mine__line-v"
+                  onClick={() => myNext.next && jumpRound(myNext.next.roundIdx)}
+                >
+                  第 {myNext.next.roundIdx + 1} 轮 · 场地 {myNext.next.courtNo} ›
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <Text className="mine__hint">这轮不上场，场边歇一会儿</Text>
+          )}
+        </View>
+      );
+    }
+    const { match, partners, opponents } = myNext;
+    return (
+      <View className="mine">
+        <View className="mine__deco" />
+        <Text className="mine__label">我的下一场</Text>
+        <View className="mine__title">
+          <Text className="mine__round" onClick={() => jumpRound(myNext.roundIdx)}>
+            第 {myNext.roundIdx + 1} 轮 ›
+          </Text>
+          <Text className="mine__court">场地 {match.courtNo}</Text>
+        </View>
+        <View className="mine__lines">
+          {partners.length > 0 ? (
+            <View className="mine__line">
+              <Text className="mine__line-k">搭档</Text>
+              <Text className="mine__line-v">{partners.map((p) => p.displayName).join('、')}</Text>
+            </View>
+          ) : null}
+          <View className="mine__line">
+            <Text className="mine__line-k">对手</Text>
+            <Text className="mine__line-v">{opponents.map((p) => p.displayName).join('、')}</Text>
+          </View>
+        </View>
+        <View className="mine__btn" onClick={() => enterScoring(match)}>
+          ▶  进入计分
+        </View>
+      </View>
+    );
+  })();
+
   return (
     <PageFrame title="对阵看板" activeTab="home" subHeader={switcherNode}>
       <View className="board">
         <View className="board__inner">
+        {mineNode}
+
         {/* 本场结算入口（有已结束对局时） */}
         {finishedCount > 0 ? (
           <View className="board__summary" onClick={goSummary}>
@@ -205,10 +408,18 @@ export default function Board() {
         )}
 
         {/* 轮空提示 */}
-        {byeNames.length > 0 ? (
+        {byeList.length > 0 ? (
           <View className="bye">
             <Text className="bye__tag">轮空</Text>
-            <Text className="bye__txt">{byeNames.join('、')} 本轮休息</Text>
+            <Text className="bye__txt">
+              {byeList.map((b, i) => (
+                <Fragment key={b.pid}>
+                  {i > 0 ? '、' : ''}
+                  <Text className={isMePid(b.pid) ? 'bye__me' : ''}>{b.name}</Text>
+                </Fragment>
+              ))}
+              {' 本轮休息'}
+            </Text>
           </View>
         ) : null}
 
@@ -223,15 +434,12 @@ export default function Board() {
               const allDone = r.matches.length > 0 && r.matches.every((m) => m.status === MatchStatus.FINISHED);
               const anyLive = r.matches.some((m) => m.status === MatchStatus.ONGOING);
               const viewing = i === roundIdx;
-              const byes = r.byeParticipantIds.map((pid) => nameMap.get(pid)?.displayName ?? '球友');
+              const byes = r.byeParticipantIds.map((pid) => ({ pid, name: nameMap.get(pid)?.displayName ?? '球友' }));
               return (
                 <View
                   key={r.index}
                   className={`sched__round ${viewing ? 'sched__round--on' : ''}`}
-                  onClick={() => {
-                    setTouched(true);
-                    setRoundIdx(i);
-                  }}
+                  onClick={() => jumpRound(i)}
                 >
                   <View className="sched__round-head">
                     <Text className="sched__round-name">第 {i + 1} 轮</Text>
@@ -243,9 +451,9 @@ export default function Board() {
                       <View key={String(m.id)} className="sched__match">
                         <Text className="sched__court num">场{m.courtNo}</Text>
                         <Text className="sched__names">
-                          {m.teamA.participants.map((p) => p.displayName).join('/')}
+                          {renderSchedNames(m.teamA.participants)}
                           <Text className="sched__vs"> vs </Text>
-                          {m.teamB.participants.map((p) => p.displayName).join('/')}
+                          {renderSchedNames(m.teamB.participants)}
                         </Text>
                         {done ? (
                           <Text className="sched__score num">
@@ -259,7 +467,17 @@ export default function Board() {
                       </View>
                     );
                   })}
-                  {byes.length > 0 ? <Text className="sched__bye">轮空 · {byes.join('、')}</Text> : null}
+                  {byes.length > 0 ? (
+                    <Text className="sched__bye">
+                      轮空 ·{' '}
+                      {byes.map((b, bi) => (
+                        <Fragment key={b.pid}>
+                          {bi > 0 ? '、' : ''}
+                          <Text className={isMePid(b.pid) ? 'sched__name--me' : ''}>{b.name}</Text>
+                        </Fragment>
+                      ))}
+                    </Text>
+                  ) : null}
                 </View>
               );
             })}

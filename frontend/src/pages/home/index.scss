@@ -142,7 +142,10 @@
   &__meta {
     display: flex;
     align-items: center;
-    gap: 14px;
+    /* 允许换行：卡片时间加上月日后（6月28日 周六 19:00）+ 长场馆名 + 我的状态标签，
+       窄屏一行放不下，宁可折到第二行也不要挤成一坨或被裁掉 */
+    flex-wrap: wrap;
+    gap: 6px 14px;
   }
   &__meta-item {
     display: flex;
@@ -154,6 +157,12 @@
   &__meta-txt {
     font-size: 11px;
     color: var(--c-text-3);
+  }
+  /* 「我和这个局的关系」标签：贴在时间/地点行首（左侧），和右上角的活动状态标签
+     分居卡片两处——右上角是「局怎么样了」，这里是「我是什么身份」，两个维度不打架。 */
+  &__mine {
+    display: flex;
+    flex-shrink: 0;
   }
   &__bottom {
     display: flex;

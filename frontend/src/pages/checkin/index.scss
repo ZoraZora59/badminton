@@ -28,6 +28,17 @@
     color: var(--c-primary);
     font-weight: 500;
   }
+  &__tip {
+    display: block;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--c-text-3);
+    margin-bottom: 10px;
+  }
+  &__tip-n {
+    color: var(--c-warn);
+    font-weight: 700;
+  }
   &__pad {
     height: 24px;
   }
@@ -121,8 +132,24 @@
     &--static {
       color: var(--c-text-3);
     }
+
+    /* 本场水平没被确认过：显示的是默认值，弱化成虚线描边，和已确认的实底区分开 */
+    &--guess {
+      background: transparent;
+      border: 1px dashed #d3dad6;
+      padding: 4px 10px;
+      color: var(--c-text-4);
+      font-weight: 500;
+    }
+  }
+  &__lv-def {
+    margin-left: 3px;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--c-warn);
   }
   &__caret {
+    margin-left: 3px;
     font-size: 10px;
     color: var(--c-text-3);
   }

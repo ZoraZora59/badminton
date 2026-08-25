@@ -50,6 +50,29 @@
     color: #fff;
   }
 
+  /* 报名截止：与时间/地点/玩法分开，避免看成又一个开打时间 */
+  &__deadline {
+    margin-top: 11px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  &__deadline-label {
+    padding: 2px 8px;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.18);
+    font-size: 10px;
+    font-weight: 600;
+    color: #eaffb0;
+  }
+  &__deadline-txt {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.92);
+  }
+
   /* ===== Body ===== */
   &__body {
     padding: 16px;
@@ -89,6 +112,32 @@
     color: var(--c-primary-dark);
     font-size: 14px;
     font-weight: 600;
+  }
+
+  /* 离开打还早时：签到降级成 outline，底下补一句「什么时候签」 */
+  &__checkin-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  &__checkin-tip {
+    text-align: center;
+    font-size: 11px;
+    color: var(--c-text-4);
+  }
+
+  /* 候补排位：让排第 1 和排第 5 看起来不一样 */
+  &__wait {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 4px;
+  }
+  &__wait-tip {
+    font-size: 11px;
+    color: var(--c-text-3);
+    text-align: center;
   }
   &__bar-main {
     flex: 1;
@@ -224,6 +273,13 @@
     flex-direction: column;
     align-items: center;
     gap: 4px;
+
+    /* 「我」：头像描绿环，和对阵看板里高亮「我」用同一套视觉语言。
+       名字格只有 44px 宽且 ellipsis，长昵称会把「·我」后缀截掉，
+       绿环才是这面墙上唯一稳定的「我在这」标记。 */
+    &--me .bm-avatar {
+      box-shadow: 0 0 0 2px var(--c-primary);
+    }
   }
   &__av {
     position: relative;
@@ -268,6 +324,11 @@
     &--ghost {
       color: var(--c-text-4);
     }
+    /* 名单里标出「我」自己那一格 */
+    &--me {
+      color: var(--c-primary);
+      font-weight: 600;
+    }
   }
   &__more {
     width: 40px;
@@ -281,6 +342,11 @@
     font-size: 13px;
     font-weight: 600;
     color: var(--c-text-4);
+
+    /* 展开后的「收起」格：两个字，字号小一点才不撑爆圆形 */
+    &--fold {
+      font-size: 11px;
+    }
   }
 }
 

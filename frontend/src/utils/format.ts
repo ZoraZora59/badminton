@@ -21,14 +21,34 @@ export function fmtHM(iso: string): string {
   const m = `${d.getUTCMinutes()}`.padStart(2, '0');
   return `${h}:${m}`;
 }
-/** 卡片时间：周六 19:00 */
+/**
+ * 卡片时间：6月28日 周六 19:00
+ * 必须带月日——首页一列球局里「这周六」和「下周六」只报星期会长得一模一样，
+ * 用户点进去才知道点错了。
+ */
 export function fmtCardTime(iso: string): string {
-  return `${fmtWeekday(iso)} ${fmtHM(iso)}`;
+  return `${fmtMonthDay(iso)} ${fmtWeekday(iso)} ${fmtHM(iso)}`;
 }
 /** 详情时间：6月28日 周六 19:00–21:00 */
 export function fmtRange(startIso: string, endIso?: string | null): string {
   const head = `${fmtMonthDay(startIso)} ${fmtWeekday(startIso)} ${fmtHM(startIso)}`;
   return endIso ? `${head}–${fmtHM(endIso)}` : head;
+}
+
+/**
+ * 首页问候语：按北京时间（固定 +8，和本文件其它时间函数同一口径，不看设备时区）
+ * 分早上/上午/中午/下午/晚上/深夜六档。写死一句「下午好」的话，早上八点打开也是下午好，
+ * 这是 App 第一屏第一行字。
+ */
+export function greetingText(now: Date = new Date()): string {
+  const h = new Date(now.getTime() + 8 * 3600 * 1000).getUTCHours();
+  if (h < 5) return '夜深了，明早再开打';
+  if (h < 9) return '早上好，热身走起';
+  if (h < 11) return '上午好，约个下午局';
+  if (h < 13) return '中午好，记得补水';
+  if (h < 18) return '下午好，准备开打';
+  if (h < 23) return '晚上好，球馆见';
+  return '夜深了，明早再开打';
 }
 
 export function activityStatusText(s: ActivityStatus): string {
