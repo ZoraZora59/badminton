@@ -211,11 +211,23 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    // 标签变成两个之后（缺 2 人 + 待开始）这一行会挤：space-between 的空隙只在有余量时存在，
+    // 挤满时标题和标签会贴到一起，所以显式留 gap
+    gap: 8px;
   }
   &__title {
     font-size: 13px;
     font-weight: 700;
     color: var(--c-text);
+    // 挤不下时让标题去换行/收缩，而不是把标签压到折行（「缺 2 人」断成两行最难看）
+    min-width: 0;
+  }
+  // 状态标签可能不止一个（缺人 + 进行中），单独成组，别被 space-between 拆到两头
+  &__tags {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
   }
 
   &__vs {
@@ -269,6 +281,60 @@
     font-size: 12px;
     font-weight: 600;
     color: var(--c-text);
+  }
+
+  // 场上空位：人走了、轮空席没人顶，位子留着等人回来补。
+  // 虚线圈沿用活动详情「+1 影位」（wall-sec__ghost）那套写法，只把色调换成缺人色，
+  // 让 1v2 一眼看出不是一场正常对局。空位没有 participantId，永远不可点。
+  &__slot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  &__slot-av {
+    width: 26px;
+    height: 26px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    background: var(--c-bg);
+    border: 1.5px dashed var(--c-warn);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    line-height: 1;
+    color: var(--c-warn);
+  }
+  &__slot-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--c-warn);
+  }
+
+  // 「这场少 N 人」说明条：局长版可点（直接开本场名单），球友版只是一行字
+  &__gap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--c-warn-bg);
+    border: 1px dashed rgba(204, 138, 74, 0.42);
+  }
+  &__gap-txt {
+    flex: 1;
+    min-width: 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--c-warn);
+  }
+  &__gap-arrow {
+    flex-shrink: 0;
+    font-size: 13px;
+    color: var(--c-warn);
+  }
+  &__gap--act:active {
+    opacity: 0.85;
   }
 }
 
@@ -386,6 +452,11 @@
   &__name--me {
     font-weight: 700;
     color: var(--c-primary);
+  }
+  // 赛程总览里的空位：和场地卡用同一个缺人色，扫一眼就知道哪轮还差人
+  &__gap {
+    font-weight: 600;
+    color: var(--c-warn);
   }
   &__score {
     flex-shrink: 0;

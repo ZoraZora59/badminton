@@ -9,6 +9,9 @@ export function engineToScheduleVM(
 ): GroupingScheduleVM {
   const rounds: RoundVM[] = schedule.rounds.map((r) => ({
     index: r.index,
+    // 草稿态赛程还没落库，玩法只能取本次分组设置——confirmGrouping 建 Round 时写进
+    // Round.playType 的也正是这个值，两边同源，看板与预览对「每队几个人」的判断才一致
+    playType: settings.playType,
     matches: r.matches.map((m) => ({
       id: `${r.index}-${m.courtNo}`,
       roundIndex: r.index,

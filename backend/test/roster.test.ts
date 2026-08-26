@@ -12,7 +12,10 @@ import { loadConfig } from '../src/config';
  * 1. 提前离场只动**还没打的 PENDING 对局**，已结束对局的 MatchPlayer 和比分一个字不改
  *    （战绩 / 今日榜 / 跨局统计全挂在 FINISHED 的 Match 上，Match 对 Round 又是 Cascade）；
  * 2. 顶替者选择必须**确定性**：整场出场次数最少者优先，并列取 participantId 最小；
- * 3. 中途归队只进轮空名单、幂等，再由局长用已有的 swapPlayers 换上场。
+ * 3. 没人可顶时**留空位、不撤场**（4 人 1 片场的小局轮空名单恒为空）——撤场是条死路：
+ *    本轮没有对局 → 换人入口不出现，重新分组又被「记过分不许重排」挡回 409，人回来也开不了场。
+ *    只有一队被摘成 0 人才真的撤场；
+ * 4. 中途归队**优先补空位**，本轮没空位才进轮空名单，再由局长用已有的 swapPlayers 换上场。
  *
  * 造数策略：活动 / 参赛者走接口（和真实链路一致），但 grouping/confirm 直接回传
  * **手工编排的 schedule** 而不是 preview 的产物——顶替规则要断言到「选中的是谁」，
@@ -146,6 +149,9 @@ const byeIds = (round: { byeJson: unknown }): number[] =>
   Array.isArray(round.byeJson) ? ([...round.byeJson] as number[]) : [];
 const playerIds = (match: { players: Array<{ participantId: number }> }): number[] =>
   match.players.map((p) => p.participantId).sort((a, b) => a - b);
+/** 某一队的上场名单（升序）——「留空位」要断言到具体哪一队少了人，不能只看总人数 */
+const teamIds = (match: { players: Array<{ participantId: number; team: string }> }, team: Team): number[] =>
+  match.players.filter((p) => p.team === team).map((p) => p.participantId).sort((a, b) => a - b);
 
 beforeAll(async () => {
   app = await buildApp(loadConfig('local'));
@@ -256,13 +262,13 @@ describe('RS1 提前离场：后续轮次自动顶替，已结束对局一个字
   });
 });
 
-describe('RS2 没人可顶：整场 PENDING 对局撤掉，其余队员回到轮空', () => {
-  it('轮空名单为空时撤场，其余三人回轮空；已结束轮次不受影响', async () => {
+describe('RS2 没人可顶：先留空位，整队被摘空才撤场', () => {
+  it('轮空名单为空时撤一人留空位；那队被摘空才整场撤掉，其余人回轮空；已结束轮次不受影响', async () => {
     const host = await login(`rs${RUN}_h3`);
     const aid = await createActivity(host.token, '四个人打完就散');
     const [k1, k2, k3, k4] = await addGuests(host.token, aid, 4, '撤场球友');
 
-    // 4 个人、每轮 1 片场 → 轮空名单恒为空，撤了人就凑不齐一场
+    // 4 个人、每轮 1 片场 → 轮空名单恒为空，撤了人就没人可顶
     await confirm(host.token, aid, [
       { index: 1, bye: [], matches: [{ courtNo: 1, a: [k1, k2], b: [k3, k4] }] },
       { index: 2, bye: [], matches: [{ courtNo: 1, a: [k1, k3], b: [k2, k4] }] },
@@ -285,36 +291,59 @@ describe('RS2 没人可顶：整场 PENDING 对局撤掉，其余队员回到轮
     expect(ra1.matches[0].scoreB).toBe(18);
     expect(playerIds(ra1.matches[0])).toEqual([k1, k2, k3, k4].sort((a, b) => a - b));
 
-    // 第 2 轮：整场撤掉，其余三人回轮空，k1 不在里面
-    expect(ra2.matches.length).toBe(0);
-    expect(byeIds(ra2).sort((a, b) => a - b)).toEqual([k2, k3, k4].sort((a, b) => a - b));
-    expect(byeIds(ra2)).not.toContain(k1);
+    // 第 2 轮：**不撤场**，只在 A 队留一个空位（k1 走了，k3 还在），B 队原封不动
+    expect(ra2.matches.length).toBe(1);
+    expect(ra2.matches[0].id).toBe(r2MatchId);
+    expect(teamIds(ra2.matches[0], Team.A)).toEqual([k3]);
+    expect(teamIds(ra2.matches[0], Team.B)).toEqual([k2, k4].sort((a, b) => a - b));
+    expect(await app.prisma.matchPlayer.count({ where: { matchId: r2MatchId } })).toBe(3); // 只少了 k1 那一行
+    expect(byeIds(ra2)).toEqual([]); // 走掉的人不进轮空
+
+    // 看板同步：第 2 轮那场还在、A 队只有 1 个人（前端据 playType 算出还缺 1 个）
+    const board = res.body.data;
+    expect(board.hostId).toBe(host.userId); // 看板自带局长身份
+    expect(board.rounds[1].playType).toBe(PlayType.DOUBLES);
+    expect(board.rounds[1].matches.length).toBe(1);
+    expect(board.rounds[1].matches[0].teamA.participants.length).toBe(1);
+    expect(board.rounds[1].matches[0].teamB.participants.length).toBe(2);
+
+    // ——— A 队仅剩的 k3 也走了 → 这队 0 人，真打不了 → 整场撤掉 ———
+    const second = await api('POST', `/api/activities/${aid}/participants/${k3}/withdraw`, { token: host.token });
+    expect(second.body.code).toBe(0);
+    const [rb1, rb2] = await dbRounds(aid);
+    expect(rb2.matches.length).toBe(0);
+    expect(byeIds(rb2).sort((a, b) => a - b)).toEqual([k2, k4].sort((a, b) => a - b));
+    expect(byeIds(rb2)).not.toContain(k1);
+    expect(byeIds(rb2)).not.toContain(k3);
     // 撤掉的 Match 连带 MatchPlayer 一起没了（Cascade），没留孤儿行
     expect(await app.prisma.match.count({ where: { id: r2MatchId } })).toBe(0);
     expect(await app.prisma.matchPlayer.count({ where: { matchId: r2MatchId } })).toBe(0);
+    // 已结束的第 1 轮仍旧一个字没动
+    expect(rb1.matches[0].scoreA).toBe(21);
+    expect(playerIds(rb1.matches[0])).toEqual([k1, k2, k3, k4].sort((a, b) => a - b));
 
-    // 看板同步：第 2 轮没有对局、三人轮空
-    const board = res.body.data;
-    expect(board.rounds[1].matches.length).toBe(0);
-    expect(board.rounds[1].byeParticipantIds.length).toBe(3);
+    const secondBoard = second.body.data;
+    expect(secondBoard.rounds[1].matches.length).toBe(0);
+    expect(secondBoard.rounds[1].byeParticipantIds.length).toBe(2);
 
     // ——— 被撤空的轮次仍然是「将来」，还得能继续改 ———
     // 如果把「没有 PENDING 对局」当成历史跳过，第 2 轮就再也动不了：
     // 走掉的 k2 会永远挂在它的轮空名单里，看板一直显示他「在场上」，
     // 局长再点一次「TA 要走了」毫无反应；回来的 k1 也进不去。这两条都得钉死。
-    const second = await api('POST', `/api/activities/${aid}/participants/${k2}/withdraw`, { token: host.token });
-    expect(second.body.code).toBe(0);
-    const [, rb2] = await dbRounds(aid);
-    expect(byeIds(rb2).sort((a, b) => a - b)).toEqual([k3, k4].sort((a, b) => a - b));
-    expect(byeIds(rb2)).not.toContain(k2);
+    const third = await api('POST', `/api/activities/${aid}/participants/${k2}/withdraw`, { token: host.token });
+    expect(third.body.code).toBe(0);
+    const [, rc2] = await dbRounds(aid);
+    expect(byeIds(rc2)).toEqual([k4]);
+    expect(byeIds(rc2)).not.toContain(k2);
 
     const back = await api('POST', `/api/activities/${aid}/participants/${k1}/rejoin`, { token: host.token });
     expect(back.body.code).toBe(0);
-    const [rc1, rc2] = await dbRounds(aid);
-    expect(byeIds(rc2)).toContain(k1);
+    const [rd1, rd2] = await dbRounds(aid);
+    expect(rd2.matches.length).toBe(0); // 空轮次没有对局可补
+    expect(byeIds(rd2)).toContain(k1); // → 仍然只能先进轮空
     // 已结束的第 1 轮依旧一个字没动
-    expect(rc1.matches[0].scoreA).toBe(21);
-    expect(byeIds(rc1)).toEqual([]);
+    expect(rd1.matches[0].scoreA).toBe(21);
+    expect(byeIds(rd1)).toEqual([]);
   });
 });
 
@@ -437,5 +466,215 @@ describe('RS4 名单变更的守卫：非局长 403 / 未开打 409 / 不属于�
     expect(playerIds(after[0].matches[0])).toEqual(playerIds(snapshot[0].matches[0]));
     // A 局也没被动过
     expect(await app.prisma.round.count({ where: { activityId: signupAid } })).toBe(0);
+  });
+});
+
+describe('RS5 留空位 → 归队补空位 → 摘空才撤场（老李九点走、十点又回来）', () => {
+  it('撤人只摘一行留空位；归队直接补进那个缺人的队；该队被摘空才整场撤掉', async () => {
+    const host = await login(`rs${RUN}_h6`);
+    const aid = await createActivity(host.token, '三缺一也得开场');
+    const [e1, e2, e3, e4] = await addGuests(host.token, aid, 4, '空位球友');
+
+    // 4 人 1 片场：轮空名单恒为空，撤谁都没人可顶
+    await confirm(host.token, aid, [
+      { index: 1, bye: [], matches: [{ courtNo: 1, a: [e1, e2], b: [e3, e4] }] },
+      { index: 2, bye: [], matches: [{ courtNo: 1, a: [e1, e2], b: [e3, e4] }] },
+    ]);
+
+    const before = await dbRounds(aid);
+    const r1MatchId = before[0].matches[0].id;
+    const r2MatchId = before[1].matches[0].id;
+    await api('POST', `/api/matches/${r1MatchId}/score`, { token: host.token, body: { scoreA: 21, scoreB: 15 } });
+
+    /** 已结束的第 1 轮全量复核：比分、胜方、四条 MatchPlayer 及各自队伍，一个字都不许动 */
+    const expectHistoryIntact = async () => {
+      const [r1] = await dbRounds(aid);
+      expect(r1.matches.length).toBe(1);
+      expect(r1.matches[0].id).toBe(r1MatchId);
+      expect(r1.matches[0].status).toBe(MatchStatus.FINISHED);
+      expect(r1.matches[0].scoreA).toBe(21);
+      expect(r1.matches[0].scoreB).toBe(15);
+      expect(r1.matches[0].winner).toBe(Team.A);
+      expect(teamIds(r1.matches[0], Team.A)).toEqual([e1, e2].sort((a, b) => a - b));
+      expect(teamIds(r1.matches[0], Team.B)).toEqual([e3, e4].sort((a, b) => a - b));
+      expect(await app.prisma.matchPlayer.count({ where: { matchId: r1MatchId } })).toBe(4);
+      expect(byeIds(r1)).toEqual([]);
+    };
+
+    // ① 留空位：e1 走，没人可顶 → 对局还在，A 队只剩 e2，B 队原封不动
+    const out = await api('POST', `/api/activities/${aid}/participants/${e1}/withdraw`, { token: host.token });
+    expect(out.body.code).toBe(0);
+    const [, ra2] = await dbRounds(aid);
+    expect(ra2.matches.length).toBe(1);
+    expect(ra2.matches[0].id).toBe(r2MatchId);
+    expect(teamIds(ra2.matches[0], Team.A)).toEqual([e2]);
+    expect(teamIds(ra2.matches[0], Team.B)).toEqual([e3, e4].sort((a, b) => a - b));
+    expect(await app.prisma.matchPlayer.count({ where: { matchId: r2MatchId } })).toBe(3); // 只少一行
+    expect(byeIds(ra2)).not.toContain(e1);
+    expect(byeIds(ra2)).toEqual([]);
+    await expectHistoryIntact();
+
+    // ② 补空位：e1 回来 → 直接进那个缺人的 A 队，不再走轮空
+    const back = await api('POST', `/api/activities/${aid}/participants/${e1}/rejoin`, { token: host.token });
+    expect(back.body.code).toBe(0);
+    const filled = await app.prisma.matchPlayer.findFirst({
+      where: { participantId: e1, match: { roundId: (await dbRounds(aid))[1].id } },
+    });
+    expect(filled?.matchId).toBe(r2MatchId);
+    expect(filled?.team).toBe(Team.A);
+    const [, rb2] = await dbRounds(aid);
+    expect(teamIds(rb2.matches[0], Team.A)).toEqual([e1, e2].sort((a, b) => a - b));
+    expect(byeIds(rb2)).not.toContain(e1); // 补进对局的人不该同时挂在轮空名单
+    expect(byeIds(rb2)).toEqual([]);
+    expect(await app.prisma.matchPlayer.count({ where: { matchId: r2MatchId } })).toBe(4);
+    await expectHistoryIntact();
+
+    // ③ 再撤 e2 → A 队又剩 e1 一个（1v2，仍然留空位）
+    const out2 = await api('POST', `/api/activities/${aid}/participants/${e2}/withdraw`, { token: host.token });
+    expect(out2.body.code).toBe(0);
+    const [, rc2] = await dbRounds(aid);
+    expect(rc2.matches.length).toBe(1);
+    expect(teamIds(rc2.matches[0], Team.A)).toEqual([e1]);
+
+    // ④ 1v2 里那个 1 也走 → A 队 0 人，真打不了 → 整场撤掉，剩下两人回轮空
+    const out3 = await api('POST', `/api/activities/${aid}/participants/${e1}/withdraw`, { token: host.token });
+    expect(out3.body.code).toBe(0);
+    const [, rd2] = await dbRounds(aid);
+    expect(rd2.matches.length).toBe(0);
+    expect(byeIds(rd2).sort((a, b) => a - b)).toEqual([e3, e4].sort((a, b) => a - b));
+    expect(byeIds(rd2)).not.toContain(e1);
+    expect(byeIds(rd2)).not.toContain(e2);
+    expect(await app.prisma.match.count({ where: { id: r2MatchId } })).toBe(0);
+    expect(await app.prisma.matchPlayer.count({ where: { matchId: r2MatchId } })).toBe(0);
+    await expectHistoryIntact();
+
+    // ⑤ 已结束那场仍然计入今日榜（历史没被这一串增删牵连）
+    const summary = (await api('GET', `/api/activities/${aid}/summary`, { token: host.token })).body.data;
+    expect(summary.rank.map((r: any) => r.participantId).sort((a: number, b: number) => a - b)).toEqual(
+      [e1, e2, e3, e4].sort((a, b) => a - b),
+    );
+  });
+});
+
+describe('RS6 补空位的挑选规则：人少的队先补、并列取 A 队、满员才进轮空', () => {
+  it('一次 rejoin 同时覆盖三种情形，且不动已满员对局的任何一行', async () => {
+    const host = await login(`rs${RUN}_h7`);
+    const aid = await createActivity(host.token, '空位怎么挑得说得清');
+    const [m1, m2, m3, m4, m5] = await addGuests(host.token, aid, 5, '挑位球友');
+
+    // 手工编排三种局面（confirm 不校验每队人数，正好用来造「有人中途走了」的现场）：
+    //   第 1 轮 2v1 且 m5 正挂在轮空里 → 补 B 队（不能一律往 A 塞），补上后要从 byeJson 摘掉，
+    //                                   否则看板会同时把他画在场上和轮空区
+    //   第 2 轮 1v1 → 两队一样少，并列取 A 队
+    //   第 3 轮 2v2 → 满员，没空位，只能进轮空（原行为不回归）
+    await confirm(host.token, aid, [
+      { index: 1, bye: [m5], matches: [{ courtNo: 1, a: [m1, m2], b: [m3] }] },
+      { index: 2, bye: [], matches: [{ courtNo: 1, a: [m1], b: [m2] }] },
+      { index: 3, bye: [], matches: [{ courtNo: 1, a: [m1, m2], b: [m3, m4] }] },
+    ]);
+
+    const before = await dbRounds(aid);
+    const [b1, b2, b3] = before.map((r) => r.matches[0].id);
+
+    const res = await api('POST', `/api/activities/${aid}/participants/${m5}/rejoin`, { token: host.token });
+    expect(res.body.code).toBe(0);
+
+    const after = await dbRounds(aid);
+    const [ra1, ra2, ra3] = after;
+
+    // ① 只有 B 队缺人 → 补进 B 队，并从轮空名单里摘掉（不能又在场上又轮空）
+    expect(teamIds(ra1.matches[0], Team.B)).toEqual([m3, m5].sort((a, b) => a - b));
+    expect(teamIds(ra1.matches[0], Team.A)).toEqual([m1, m2].sort((a, b) => a - b));
+    expect(byeIds(ra1)).toEqual([]);
+
+    // ② 两队一样少 → 并列取 A 队
+    expect(teamIds(ra2.matches[0], Team.A)).toEqual([m1, m5].sort((a, b) => a - b));
+    expect(teamIds(ra2.matches[0], Team.B)).toEqual([m2]);
+    expect(byeIds(ra2)).toEqual([]);
+
+    // ③ 满员 → 一行不动，只进轮空名单（原行为）
+    expect(playerIds(ra3.matches[0])).toEqual([m1, m2, m3, m4].sort((a, b) => a - b));
+    expect(await app.prisma.matchPlayer.count({ where: { matchId: b3 } })).toBe(4);
+    expect(byeIds(ra3)).toEqual([m5]);
+
+    // 三场的 Match 行本身都还在（补空位只增 MatchPlayer，不重建对局）
+    expect(await app.prisma.match.count({ where: { id: { in: [b1, b2, b3] } } })).toBe(3);
+
+    // 幂等：再来一次，既不会补出第二行，也不会在轮空里出现两次
+    const again = await api('POST', `/api/activities/${aid}/participants/${m5}/rejoin`, { token: host.token });
+    expect(again.body.code).toBe(0);
+    const twice = await dbRounds(aid);
+    expect(await app.prisma.matchPlayer.count({ where: { participantId: m5, matchId: b1 } })).toBe(1);
+    expect(await app.prisma.matchPlayer.count({ where: { participantId: m5, matchId: b2 } })).toBe(1);
+    expect(byeIds(twice[2]).filter((id) => id === m5).length).toBe(1);
+  });
+});
+
+describe('RS7 同队走掉两个人：整场撤空之后，人回来还能就地重开一场', () => {
+  it('两人成对离场 → 那队被摘空整场撤掉 → 两人归队后轮空席够 4 人，自动重开对局', async () => {
+    const host = await login(`rs${RUN}_h7`);
+    const aid = await createActivity(host.token, '两口子一起走');
+    const [f1, f2, f3, f4] = await addGuests(host.token, aid, 4, '成对球友');
+
+    // 4 人 1 片场：轮空席恒为空。f1/f2 同在 A 队 —— 拼车、两口子成对离场是球场上最常见的走人方式
+    await confirm(host.token, aid, [
+      { index: 1, bye: [], matches: [{ courtNo: 1, a: [f1, f2], b: [f3, f4] }] },
+      { index: 2, bye: [], matches: [{ courtNo: 1, a: [f1, f2], b: [f3, f4] }] },
+    ]);
+    const before = await dbRounds(aid);
+    const r1MatchId = before[0].matches[0].id;
+    await api('POST', `/api/matches/${r1MatchId}/score`, { token: host.token, body: { scoreA: 21, scoreB: 17 } });
+
+    /** 已结束的第 1 轮：重开对局绝不能碰到它 */
+    const expectHistoryIntact = async () => {
+      const [r1] = await dbRounds(aid);
+      expect(r1.matches.length).toBe(1);
+      expect(r1.matches[0].id).toBe(r1MatchId);
+      expect(r1.matches[0].status).toBe(MatchStatus.FINISHED);
+      expect(r1.matches[0].scoreA).toBe(21);
+      expect(r1.matches[0].scoreB).toBe(17);
+      expect(r1.matches[0].winner).toBe(Team.A);
+      expect(await app.prisma.matchPlayer.count({ where: { matchId: r1MatchId } })).toBe(4);
+    };
+
+    // ① f1 走：A 队还剩 f2，留空位
+    await api('POST', `/api/activities/${aid}/participants/${f1}/withdraw`, { token: host.token });
+    // ② f2 也走：A 队被摘成 0 人 → 这场真的打不了，整场撤掉，f3/f4 回轮空
+    await api('POST', `/api/activities/${aid}/participants/${f2}/withdraw`, { token: host.token });
+    const [, emptied] = await dbRounds(aid);
+    expect(emptied.matches.length).toBe(0);
+    expect(byeIds(emptied).sort((a, b) => a - b)).toEqual([f3, f4].sort((a, b) => a - b));
+    await expectHistoryIntact();
+
+    // ③ f1 先回来：轮空席只有 3 人，还凑不齐一场，先在轮空席等着
+    const back1 = await api('POST', `/api/activities/${aid}/participants/${f1}/rejoin`, { token: host.token });
+    expect(back1.body.code).toBe(0);
+    const [, waiting] = await dbRounds(aid);
+    expect(waiting.matches.length).toBe(0);
+    expect(byeIds(waiting).sort((a, b) => a - b)).toEqual([f1, f3, f4].sort((a, b) => a - b));
+
+    // ④ f2 也回来：轮空席凑够 4 人 → 就地重开一场（这一步没有，这一轮就永久报废了）
+    const back2 = await api('POST', `/api/activities/${aid}/participants/${f2}/rejoin`, { token: host.token });
+    expect(back2.body.code).toBe(0);
+    const [, reopened] = await dbRounds(aid);
+    expect(reopened.matches.length).toBe(1);
+    expect(reopened.matches[0].status).toBe(MatchStatus.PENDING);
+    expect(reopened.matches[0].courtNo).toBe(1);
+    expect(playerIds(reopened.matches[0])).toEqual([f1, f2, f3, f4].sort((a, b) => a - b));
+    // 四人出场次数都是 1（都只打过第 1 轮），并列按 id 升序 → 前两个进 A、后两个进 B
+    expect(teamIds(reopened.matches[0], Team.A)).toEqual([f1, f2].sort((a, b) => a - b));
+    expect(teamIds(reopened.matches[0], Team.B)).toEqual([f3, f4].sort((a, b) => a - b));
+    expect(byeIds(reopened)).toEqual([]); // 上场了就不该还挂在轮空席
+    await expectHistoryIntact();
+
+    // ⑤ 重开之后一切照常：这一场能正常记分，说明这一轮真的救回来了、不是个空壳
+    const scored = await api('POST', `/api/matches/${reopened.matches[0].id}/score`, {
+      token: host.token,
+      body: { scoreA: 21, scoreB: 19 },
+    });
+    expect(scored.body.code).toBe(0);
+    const [, done] = await dbRounds(aid);
+    expect(done.matches[0].status).toBe(MatchStatus.FINISHED);
+    expect(done.matches[0].winner).toBe(Team.A);
   });
 });

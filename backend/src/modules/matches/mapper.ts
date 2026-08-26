@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import type { MatchVM, RoundVM } from '@badminton/shared';
-import { MatchStatus, SkillLevel, Team, levelWeight } from '@badminton/shared';
+import { MatchStatus, PlayType, SkillLevel, Team, levelWeight } from '@badminton/shared';
 import { toParticipantVM } from '../checkin/mapper';
 
 export const matchInclude = {
@@ -38,6 +38,9 @@ export function toRoundVM(round: RoundWithMatches): RoundVM {
   const bye = Array.isArray(round.byeJson) ? (round.byeJson as number[]) : [];
   return {
     index: round.index,
+    // 本轮玩法透传给看板：有人中途离场后场上会**留空位**（2v2 变 1v2），
+    // 前端要靠 playType 算出「这队本该几个人、现在缺几个」，才画得出那个待补的空位。
+    playType: round.playType as PlayType,
     matches: round.matches.map((m) => toMatchVM(m, round.index)),
     byeParticipantIds: bye,
   };

@@ -1,6 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import type { BoardVM, MatchVM, SummaryVM, TodayRankRowVM } from '@badminton/shared';
-import { ActivityStatus, GroupMode, MatchStatus, Team } from '@badminton/shared';
+import { ActivityStatus, GroupMode, MatchStatus, PlayType, Team } from '@badminton/shared';
 import { Errors } from '../../lib/errors';
 import { matchInclude, roundInclude, toMatchVM, toRoundVM } from './mapper';
 
@@ -19,6 +19,9 @@ export async function getBoard(prisma: PrismaClient, activityId: number): Promis
   return {
     activityId,
     status: activity.status as ActivityStatus,
+    // 局长身份随看板一起下发：前端判 isHost 不必再单独拉一次活动详情，
+    // 少一条请求就少一次「那条挂了、局长静默变成围观视图、所有名单入口全没了」
+    hostId: activity.hostId,
     currentRound,
     totalRounds: roundVMs.length,
     // 球馆真实场地号透传给看板：引擎里的 courtNo 恒为 1..N，展示层用 courtLabel() 翻成「5 号场」
@@ -166,8 +169,13 @@ export async function swapPlayers(
 // 战绩、今日榜、跨局个人统计全都挂在 FINISHED 的 Match 上，动了就是数据丢失。
 // 所以下面所有操作都只碰「还没打的 PENDING 对局」和轮空名单。
 
-/** 轮次 + 对局 + 上场名单：名单变更要同时看「场上」和「轮空」两侧 */
-const rosterRoundInclude = { matches: { include: { players: true } } } satisfies Prisma.RoundInclude;
+/**
+ * 轮次 + 对局 + 上场名单：名单变更要同时看「场上」和「轮空」两侧。
+ * 按 courtNo 升序取，让「补哪一场空位」「先处理哪一场」这类挑选是确定性的、可测的。
+ */
+const rosterRoundInclude = {
+  matches: { include: { players: true }, orderBy: { courtNo: 'asc' } },
+} satisfies Prisma.RoundInclude;
 
 /** 读某轮的轮空名单（byeJson 是 Json 列，脏数据一律当空处理） */
 function byesOf(round: { byeJson: Prisma.JsonValue | null }): number[] {
@@ -192,7 +200,7 @@ async function assertRosterEditable(
   activityId: number,
   participantId: number,
   hostId: number,
-): Promise<void> {
+) {
   const activity = await prisma.activity.findUnique({ where: { id: activityId } });
   if (!activity) throw Errors.notFound('活动不存在');
   if (activity.hostId !== hostId) throw Errors.forbidden('仅局长可调整名单');
@@ -204,6 +212,26 @@ async function assertRosterEditable(
     select: { id: true },
   });
   if (!participant) throw Errors.notFound('该球友不在本场活动里');
+  return activity;
+}
+
+/**
+ * 「谁先上」的统一口径：整场出场次数最少的优先，并列取 participantId 最小。
+ * 顶替、补位、重开一场都用它——同样的输入永远同样的结果，才解释得清也测得了。
+ */
+function pickOrder(appearances: Map<number, number>) {
+  return (a: number, b: number) => (appearances.get(a) ?? 0) - (appearances.get(b) ?? 0) || a - b;
+}
+
+/** 统计每个 participant 在整场（含已结束对局）出场多少次 */
+function countAppearances(rounds: Array<{ matches: Array<{ players: Array<{ participantId: number }> }> }>) {
+  const m = new Map<number, number>();
+  for (const round of rounds) {
+    for (const match of round.matches) {
+      for (const player of match.players) m.set(player.participantId, (m.get(player.participantId) ?? 0) + 1);
+    }
+  }
+  return m;
 }
 
 /**
@@ -212,8 +240,13 @@ async function assertRosterEditable(
  * 顶替者规则（必须确定性，否则不可测也不可解释）：从本轮轮空名单里挑
  * 「整场活动出场次数最少」的人，并列时取 participantId 最小者——
  * 既是「谁坐得久谁先上」的现场公平感，也保证同样的输入永远同样的结果。
- * 轮空名单空到挑不出人时，整场 PENDING 对局直接撤掉，其余队员回到轮空，
- * 而不是让场上留一个空位（3 个人打不了双打）。
+ *
+ * 挑不出顶替者时（4 人 1 片场是最常见的小局，轮空名单恒为空）：**留空位，不撤场**。
+ * 现实里这就是「三缺一」——场子还在，谁回来谁补上。上一版在这里整场撤掉，结果是死路：
+ * 本轮没有对局 → 换人入口不出现；重新分组被 confirmGrouping 的「记过分就不许重排」挡回 409；
+ * 进行中状态下活动页主按钮只有「继续比赛看板」，回不到分组页。人回来了也开不了场。
+ * 唯一还得整场撤掉的情况是**他所在的那一队会被摘成 0 人**（单打，或 1v2 里再走掉那个 1），
+ * 那是真的没法打，其余队员回轮空等下一轮。
  */
 export async function withdrawParticipant(
   prisma: PrismaClient,
@@ -279,8 +312,19 @@ export async function withdrawParticipant(
           byesChanged = true;
           bump(candidate, 1);
           bump(participantId, -1);
+        } else if (match.players.some((p) => p.team === row.team && p.participantId !== participantId)) {
+          // 没人可顶，但他那一队还剩人 → **只摘他这条上场记录，对局保留**（2v2 变 1v2）。
+          // 空位由看板画出来（RoundVM.playType 告诉前端每队本该几个人），谁回来谁补上。
+          // 同样带 status=PENDING 守卫：上面 findMany 之后这一场可能刚被记完分，
+          // 裸 delete 会把一条已结束对局的上场记录抹掉，那人的战绩就凭空少一局
+          const removed = await tx.matchPlayer.deleteMany({
+            where: { id: row.id, match: { status: MatchStatus.PENDING } },
+          });
+          if (removed.count === 0) throw RACED();
+          bump(participantId, -1);
         } else {
-          // 没人可顶：整场撤掉（PENDING 没有比分可丢），其余队员放回轮空等下一轮。
+          // 他一走这队就 0 人（单打，或 1v2 里再走掉那个 1）→ 这场真打不了了：
+          // 整场撤掉（PENDING 没有比分可丢），其余队员放回轮空等下一轮。
           // 同样带 status=PENDING 守卫——这里删的是整条 Match，级联带走 MatchPlayer，
           // 抢跑一旦发生就是把一场有比分的对局连同战绩删掉，是本模块唯一的不可逆写
           const removed = await tx.match.deleteMany({ where: { id: match.id, status: MatchStatus.PENDING } });
@@ -305,9 +349,10 @@ export async function withdrawParticipant(
 /**
  * 中途归队：让人（晚到的球友、刚加的临时球友、先前撤了又回来的人）重新进入后续轮次。
  *
- * 只把他放进「还没打的轮次」的轮空名单，不擅自替换任何已排好的人——
- * 谁下场谁上场是局长的判断，放进轮空后用已有的 swapPlayers 换上场即可。
- * 幂等：已经在场上或已在轮空名单里就跳过，重复调用不会出现两次。
+ * **优先补空位**：有人提前走会在场上留下待补的位置（2v2 变 1v2），归队第一件事就是把它填上——
+ * 不然「三缺一」永远缺着，人回来了却只能干坐轮空，和当初直接撤场一样开不了局。
+ * 本轮没有空位才退回原行为：放进轮空名单，谁下场谁上场由局长用已有的 swapPlayers 拍板。
+ * 幂等：已经在场上就跳过，已在轮空名单里也不会重复追加。
  */
 export async function rejoinParticipant(
   prisma: PrismaClient,
@@ -315,7 +360,8 @@ export async function rejoinParticipant(
   participantId: number,
   hostId: number,
 ): Promise<BoardVM> {
-  await assertRosterEditable(prisma, activityId, participantId, hostId);
+  const activity = await assertRosterEditable(prisma, activityId, participantId, hostId);
+  const mixed = activity.mixedDoubles === true;
 
   await prisma.$transaction(async (tx) => {
     const rounds = await tx.round.findMany({
@@ -323,14 +369,130 @@ export async function rejoinParticipant(
       include: rosterRoundInclude,
       orderBy: { index: 'asc' },
     });
+    // 重开一场时要挑人，口径与顶替/补位保持一致（出场少的先上）
+    const appearances = countAppearances(rounds);
+    const order = pickOrder(appearances);
+    // 混双只在「补位/重开」时作为**偏好**：满足不了也要让人回得来，不能因为性别配不上就把人晾着
+    const genders = mixed
+      ? new Map(
+          (await tx.participant.findMany({ where: { activityId }, select: { id: true, gender: true } })).map(
+            (x) => [x.id, x.gender as string],
+          ),
+        )
+      : new Map<number, string>();
+    const known = (g?: string) => g === 'MALE' || g === 'FEMALE';
+    /** 把 pid 放进这支队伍是否满足混双（队里已有异性、或双方性别未知都算不违例） */
+    const mixOk = (pid: number, mates: number[]) =>
+      !mixed ||
+      mates.every((m) => {
+        const a = genders.get(pid);
+        const b = genders.get(m);
+        return !known(a) || !known(b) || a !== b;
+      });
 
     for (const round of rounds) {
       if (!isUpcomingRound(round)) continue; // 打完的轮次不动；被撤空的轮次仍算将来，人要能回得去
-      const onCourt = round.matches.some((m) => m.players.some((p) => p.participantId === participantId));
-      const byes = byesOf(round);
-      if (onCourt || byes.includes(participantId)) continue; // 幂等
-      byes.push(participantId);
-      await tx.round.update({ where: { id: round.id }, data: { byeJson: byes } });
+      // 只看还没打的对局：已结束那场里有他，说明这一轮他早就打过了，
+      // 既不该再补进别的场（一轮打两场），也不该塞进轮空（轮空=这轮没上场）
+      const onCourt = round.matches.some(
+        (m) => m.status === MatchStatus.PENDING && m.players.some((p) => p.participantId === participantId),
+      );
+      const playedThisRound = round.matches.some(
+        (m) => m.status === MatchStatus.FINISHED && m.players.some((p) => p.participantId === participantId),
+      );
+      if (onCourt || playedThisRound) continue;
+      let byes = byesOf(round);
+
+      // ① 先找本轮缺人的 PENDING 对局。挑选必须确定性，否则不可测也没法跟局长解释：
+      //    场号小的先补；同一场里人少的那队先补，两队一样少取 A 队。
+      //    开了混双时，优先挑「补进去不会变成同性搭档」的位置，实在没有再退回第一个空位。
+      const teamSize = (round.playType as PlayType) === PlayType.DOUBLES ? 2 : 1;
+      const slots: Array<{ matchId: number; team: Team; fits: boolean }> = [];
+      for (const match of round.matches) {
+        if (match.status !== MatchStatus.PENDING) continue;
+        // MatchPlayer 有 @@unique([matchId, participantId])：已在这场里就不能再补进来，会撞唯一键
+        if (match.players.some((p) => p.participantId === participantId)) continue;
+        const idsOf = (t: Team) => match.players.filter((p) => p.team === t).map((p) => p.participantId);
+        const a = idsOf(Team.A);
+        const b = idsOf(Team.B);
+        const shortA = a.length < teamSize;
+        const shortB = b.length < teamSize;
+        if (!shortA && !shortB) continue; // 这场满员
+        let team: Team;
+        if (shortA && shortB) team = b.length < a.length ? Team.B : Team.A;
+        else team = shortA ? Team.A : Team.B;
+        slots.push({ matchId: match.id, team, fits: mixOk(participantId, team === Team.A ? a : b) });
+      }
+      const slot = slots.find((x) => x.fits) ?? slots[0] ?? null;
+
+      if (slot) {
+        // 补人之前先用一次条件写把这场锁住：事务里的 findMany 在 REPEATABLE READ 下读的是旧快照，
+        // 再查一遍也看不到别人刚提交的 FINISHED；只有 updateMany 走当前读并加行锁。
+        // 这是一次 no-op 写（PENDING 写成 PENDING），只为拿锁和拿 count——
+        // 已实测 Prisma + MySQL 的 updateMany 返回的是 matched 行数，值没变照样算 1，
+        // 所以 count===0 只可能是「这一场刚被记了比分」，让局长刷新后重来。
+        const locked = await tx.match.updateMany({
+          where: { id: slot.matchId, status: MatchStatus.PENDING },
+          data: { status: MatchStatus.PENDING },
+        });
+        if (locked.count === 0) throw RACED();
+        await tx.matchPlayer.create({ data: { matchId: slot.matchId, participantId, team: slot.team } });
+        appearances.set(participantId, (appearances.get(participantId) ?? 0) + 1);
+        // 已经上场就不该还挂在轮空名单上（先前被撤走时可能留过一条）
+        if (byes.includes(participantId)) {
+          await tx.round.update({
+            where: { id: round.id },
+            data: { byeJson: byes.filter((id) => id !== participantId) },
+          });
+        }
+        continue;
+      }
+
+      // ② 本轮没有空位（对局都满员，或整轮已被撤空）→ 先进轮空名单（幂等，不重复塞）
+      let byesChanged = false;
+      if (!byes.includes(participantId)) {
+        byes.push(participantId);
+        byesChanged = true;
+      }
+
+      /*
+       * ③ 整轮一场对局都没有、而轮空席已经够开一场 → 就地重开一场。
+       *
+       * 这是「人回来了却开不了场」死路的最后一块。撤人时只有「某一队被摘成 0 人」才会整场撤掉，
+       * 而拼车、两口子成对离场是球场上最常见的走人方式——只要那两人在某轮同队，那一轮就会被撤空。
+       * 若不能重开，他们回来时会出现「4 个人全挂轮空、本轮 0 场对局、补无可补」，
+       * 而重新分组又被防删比分的守卫挡住（只要记过一局就 409），这一轮等于永久报废。
+       * 更糟的是同一次离场里，他们分属不同队的轮次能靠空位救回来、同队的那轮却报废，
+       * 局长完全无法预期哪一轮救得回来。
+       *
+       * 只在「这一轮本来就没有任何对局」时重开，所以永远不会碰到已结束的数据：
+       * isUpcomingRound 已经把「有对局且全部打完」的轮次挡在外面了。
+       */
+      const perCourt = teamSize * 2;
+      if (round.matches.length === 0 && byes.length >= perCourt) {
+        const picked = [...byes].sort(order).slice(0, perCourt);
+        // 混双偏好：能凑出「每队一男一女」就按这个排，凑不出就按出场少的顺序交替分队
+        let lineup = picked;
+        if (mixed && teamSize === 2) {
+          const males = picked.filter((id) => genders.get(id) === 'MALE');
+          const females = picked.filter((id) => genders.get(id) === 'FEMALE');
+          if (males.length >= 2 && females.length >= 2) lineup = [males[0], females[0], males[1], females[1]];
+        }
+        const created = await tx.match.create({ data: { roundId: round.id, courtNo: 1 } });
+        await tx.matchPlayer.createMany({
+          data: lineup.map((pid, i) => ({
+            matchId: created.id,
+            participantId: pid,
+            // 双打按 A,A,B,B 分队（混双时上面已排成 男,女,男,女）；单打就是 A vs B
+            team: i < teamSize ? Team.A : Team.B,
+          })),
+        });
+        for (const pid of lineup) appearances.set(pid, (appearances.get(pid) ?? 0) + 1);
+        byes = byes.filter((id) => !lineup.includes(id));
+        byesChanged = true;
+      }
+
+      if (byesChanged) await tx.round.update({ where: { id: round.id }, data: { byeJson: byes } });
     }
   }, { timeout: 20_000, maxWait: 10_000 });
 

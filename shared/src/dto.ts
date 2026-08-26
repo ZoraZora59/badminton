@@ -219,6 +219,8 @@ export interface MatchVM {
 }
 export interface RoundVM {
   index: number;
+  /** 本轮玩法：双打每队 2 人、单打 1 人。前端据此判断某队是否缺人（有人中途离场会留空位） */
+  playType: PlayType;
   matches: MatchVM[];
   /** 本轮轮空（休息）的参赛者 */
   byeParticipantIds: number[];
@@ -259,6 +261,8 @@ export interface SwapPlayersReq {
 export interface BoardVM {
   activityId: number;
   status: ActivityStatus;
+  /** 局长 userId：看板自带身份，免得前端为了判断 isHost 再拉一次活动（那条请求一挂，局长就静默变成围观视图） */
+  hostId: number;
   currentRound: number;
   totalRounds: number;
   /** 球馆真实场地编号（透传自活动），配合 courtLabel() 把 courtNo 翻成「5 号场」 */
