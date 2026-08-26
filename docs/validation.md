@@ -63,7 +63,7 @@
 | US-6.1 看板 + 轮空提示 | `GET /activities/:id/board` | api.test 确认后看板 totalRounds；`board` 页轮次切换+轮空；当前轮下方新增「完整赛程」总览（每轮各场地对阵/比分/轮空一屏可扫，点任意轮切换查看），开赛前不再一屏只有一轮 | ✅ |
 | US-6.2 大字比分+大按钮计分定胜负 | `POST /matches/:id/score` | api.test 21:15→winner A、FINISHED；`scoring` 页 | ✅ |
 | US-6.3 改判 | `PATCH /matches/:id/score` | api.test 改判翻盘；平局被拒(400)；参与球友改判生效 | ✅ |
-| US-6.4 我今天打几场/下一场 | board（含每轮对阵） | `board`「完整赛程」总览可一屏扫完各轮对阵与轮空；仍未专门高亮「我的下一场」 | 🟡 |
+| US-6.4 我今天打几场/下一场 | board（`BoardVM` 新增 `hostId` / `RoundVM.playType`） | `board` 页顶部「我的下一场」卡（第几轮·几号场·搭档·对手，可直接进计分；轮空时给出下一场在哪轮），全页高亮「我」；`myPid` 优先查花名册——全程轮空的人不出现在任何对阵里，只扫 matches 会把他当成围观者。**体验未经真机/DevTools 验证**（verify:ui 已失效，见文末） | 🟡 |
 | US-6.5 对局计时（可选） | — | v1 未做 | ⚪ |
 
 > 2026-07-18 计分体验加固：
@@ -83,6 +83,31 @@
 | US-8.1 累计战绩（局数/胜率/积分/最佳搭档/难兄难弟/趋势） | `GET /users/:id/stats` | `test/stats.test.ts` 6 例：最佳搭档按共同胜场、难兄难弟按一起输球次数、唯一搭档不与最佳撞人（null）、Guest/对手不进聚合、trend 近7升序、recentMatches 近10倒序、winRate 两位小数；api.test totalGames=wins+losses | ✅ |
 | US-8.2 分享战绩 | 同上 | `profile` 页分享 | ✅ |
 | US-8.3 只读查看他人战绩 | `GET /users/:id/stats`（免登录） | `profile?id=` 只读 | ✅ |
+
+## E9 开打后名单可变更（2026-08-26 新增）
+
+> 现场真实痛点：确认开打后阵容就锁死了，而「老李 9 点得走」「隔壁球友临时跑来」每场都在发生。
+
+| 能力 | 接口 | 测试/页面 | 状态 |
+|---|---|---|---|
+| 提前离场 | `POST /activities/:id/participants/:pid/withdraw` | 只动**还没打的** PENDING 对局；本轮轮空席有人就顶替（出场最少 → id 最小，确定性）；没人可顶**留空位不撤场**；只有某队被摘成 0 人才整场撤掉 | ✅ |
+| 中途归队 | `POST …/participants/:pid/rejoin` | 优先补进缺人的队（开混双时偏好异性搭档，凑不出不阻断）；本轮无空位进轮空席；**整轮被撤空且轮空席够开一场时就地重开一场** | ✅ |
+| 本轮换人 | `POST /matches/:id/swap` | 看板上局长可点选互换（含轮空席）。注意**只在同一轮内生效** | ✅ |
+| 场地真实编号 | `Activity.courtLabels` | 建局选填「5,6,12」，看板/赛程/分组预览/计分页统一走 shared 的 `courtLabel()`；不填回落序号 | ✅ |
+
+`backend/test/roster.test.ts` 8 例，断言的是**数据库真实状态**而非状态码：顶替者选择、留空位、摘空才撤场、
+空轮次里的人能摘能回、归队补空位的挑选规则、成对离场后重开一场并能正常记分、以及 403/409/404 守卫。
+每条都复核「已结束对局的比分与 MatchPlayer 一个字没动」。
+
+**并发安全**：InnoDB REPEATABLE READ 下事务内重读仍是旧快照，所以所有碰 `MatchPlayer`/`Match` 的写
+都把 `status=PENDING` 写进 WHERE（`updateMany`/`deleteMany`），影响行数为 0 即 409 回滚；
+`create` 无法条件写，改为先用一次 no-op 条件写拿行锁。已实测该守卫既拦得住也不误伤。
+
+**已知边界（不要写成「已完全解决」）**：
+- 缺人的场次**照样能进入计分**，1 个人打赢 2 个人会原样进今日榜与跨局战绩。是否要拦属产品口径，当前不拦。
+- `confirmGrouping` 不校验 `participantId` 是否属于本活动（既有问题，非本次引入）。
+- 一轮里若既有已打完的对局、又有被撤掉的场次，该轮会被当作历史冻结，撤走的人会留在它的轮空名单里（仅展示层残留）。
+- 上述能力**均未经真机 / 微信开发者工具验证**。
 
 ## 红线核对
 - 🔴 不碰钱：无任何支付/费用字段（建局表单、结算均无金额）；建局备注占位文案**及 seed 种子数据**均已去除「AA 现场结」等暗示付款措辞（DevTools 可视化验收时发现 seed remark 仍含 AA，已改为「自带球拍，提前 10 分钟到场热身」并重灌 dev 库），代码与种子全局无 AA/费用/付款文案。**展示层红线护栏**：`utils/format.ts#cleanRemark` 在前端剔除备注里含 AA/费用/付款/现场结/收费/元每人 等小句——即便线上脏数据仍含 AA，小程序也不会渲染（活动详情「自带球拍，AA 现场结。」→「自带球拍。」），已随版本上线，**彻底满足「小程序内不出现 AA」**。数据层另备一次性脚本 `backend/scripts/fix-prod-aa.ts`（`pnpm fix:aa --env=prod` 在服务器跑）做根因清理；线上 `badminton` 库凭证仅在服务器侧。
@@ -150,3 +175,18 @@ CI：`.github/workflows/ci.yml` 每次 push master 跑 shared 构建 + 前端 ty
 **小程序已上传**：`node ci/upload.cjs` 成功上传「开发版 0.1.0」（指向线上 API）。
 
 **最后一步（仅你能在微信后台做）**：request 合法域名加 `https://badminton.zorazora.cn`，再把开发版设为「体验版」即可真机验证。
+
+## ⚠️ `verify:ui` 门禁现状（2026-08-25 查实）
+
+`pnpm --filter @badminton/frontend verify:ui` **已结构性失效，不是临时故障**：
+本机微信开发者工具为 **36.6.0**，而 `miniprogram-automator` 全网最新版就是 **0.12.1（最后发布 2023-11-07）**。
+DevTools 36.x 已把自动化迁到 MCP 接口（安全设置里的「复制 MCP 配置」、`<userDir>/<hash>/Default/mcp.json`），
+旧的 `cli auto --auto-port` 只剩向后兼容空壳：命令被接受、返回 `✔ auto`，但**端口永远不绑定**。
+
+已排除（勿重复排查）：登录态正常（`cli islogin` → `{"login":true}`）、安全设置全开、项目能正常打开、
+等 120 秒无效、`--trust-project` 无效、完全退出 IDE 后由 auto 全新拉起也无效。
+诊断要加 `--debug`——`miniprogram-automator` 的 `launch()` 把 spawn 的 `stdio` 设成了 `ignore`，原始报错被吞。
+
+**因此 CLAUDE.md 里「上传小程序前先跑 verify:ui」这条规则目前无法执行**，
+涉及报名签到闭环的改动只能靠人工在开发者工具里看渲染。要恢复自动门禁，
+需把 `frontend/ci/automator-verify.cjs` 改写到 DevTools 的 MCP 接口上（独立任务）。
