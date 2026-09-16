@@ -14,8 +14,8 @@ import { GroupMode, PlayType, RotationKind, Gender } from '@badminton/shared';
  *   ① planRound 逐轮贪心（每轮若干起点 + 两两交换局部搜索）→ ② optimizeByes 轮空计划退火（可选）→ 按新轮空重排对阵
  *   → ③ annealSchedule 整份赛程模拟退火（对阵换位 + 轮空时机互换）→ ④ orderRounds 轮次排序（相邻两轮少重合）
  * 多个起点使用不同权重侧重（RESTART_PROFILES），用 scheduleQuality 按上面的优先级择优，同分再比未缩放的 totalCost。
- * 搜索预算按「轮数 × 上场位 × (上场位 + 轮空位)」收缩。本机：常见规模（8–40 人、2–9 场、≤ 12 轮）≤ 0.15s，
- * 100 人 20 场 30 轮约 0.6s；分组预览在请求里同步执行，接口限制参赛者 ≤ 200 人。
+ * 搜索预算按「轮数 × 上场位 × (上场位 + 轮空位)」收缩。线上（4 核）：常见规模（8–40 人、2–9 场、≤ 12 轮）0.05–0.3s，
+ * 100 人 20 场 30 轮约 1s；分组预览在请求里同步执行，接口限制参赛者 ≤ 200 人。
  *
  * 评测与迭代记录见 docs/engine-eval/README.md，评测脚本 backend/scripts/eval-engine.ts。
  */
