@@ -9,7 +9,8 @@ import { confirmGrouping, previewGrouping } from './service';
 const IdParam = z.object({ id: z.coerce.number().int().positive() });
 
 const PreviewBody = z.object({
-  participantIds: z.array(z.number().int().positive()).min(2),
+  // 上限只防异常请求把同步计算的分组引擎拖慢（活动人数上限 100，再加临时球友也远到不了 200）
+  participantIds: z.array(z.number().int().positive()).min(2).max(200),
   playType: z.nativeEnum(PlayType),
   mode: z.nativeEnum(GroupMode),
   rotation: z.nativeEnum(RotationKind).optional(),
