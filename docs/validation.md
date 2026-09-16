@@ -50,12 +50,18 @@
 | 故事 | 接口 | 测试/页面 | 状态 |
 |---|---|---|---|
 | US-5.1 从签到名单选人 | `GET /activities/:id/participants` | api.test 物化参赛者（真人+Guest）；`grouping` 向导**①选人步骤**默认全选、可点头像排除未上场者 | ✅ |
-| US-5.2 智能平衡 | `POST …/grouping/preview {mode:BALANCED}` | engine.test 场内 {a,d}vs{b,c} 实力差最小；api.test 平衡预览 | ✅ |
-| US-5.3 自动轮转 美式/墨式 | preview `{mode:ROTATION, rotation}` | engine.test 美式无自搭档+重复受控、墨式按 standings 配对 | ✅ |
+| US-5.2 智能平衡 | `POST …/grouping/preview {mode:BALANCED}` | engine.test：两边实力接近、**多轮之间轮换搭档/对手、无完全相同的对阵**（旧引擎每轮阵容原样重复，见 [engine-eval](./engine-eval/README.md) C0/C1）；api.test 平衡预览 | ✅ |
+| US-5.3 自动轮转 美式/墨式 | preview `{mode:ROTATION, rotation}` | engine.test 美式搭档零重复/对手均摊/拦一边倒对局、墨式按 standings 锁场地。**墨式没有调用方传积分，预览等同平衡模式**（「打完一轮按积分重排」未闭环，见 engine-eval 已知限制） | 🟡 |
 | US-5.4 场地数/轮数/混双参数 | preview settings | engine.test 出场/轮空均衡；场地/轮数在 `grouping` 向导设置，**混双在建局阶段设置（仅双打）**，向导默认沿用建局的玩法/模式/场地数/混双；**轮数默认按活动时长估算（每轮约 15–20 分钟）并给区间提示，局长仍可手动调整** | ✅ |
 | US-5.5 点选换位微调（算法给草稿，人拍板） | `POST /matches/:id/swap`（确认后）+ `grouping` 页草稿态本地交换 | api.test swap：场上↔轮空对调生效；**交互为「选中一人再点另一人(含轮空席)交换」，页面文案与之一致（不再出现"拖拽"误导）** | ✅ |
 | US-5.6 场地×轮次看板预览 | preview 返回 rounds | api.test 校验 rounds/每轮场次/队伍人数/轮空数 | ✅ |
-| US-5.7 混双约束（可选） | preview `mixedDoubles`（**建局阶段开启**） | 引擎按性别强制组队（一男一女，UNKNOWN 视作可搭配），不可满足时 `metrics.mixedViolations` 报违例队数、前端明确提示并可换位调整；engine.test「4男4女→0违例 / 6男2女→2违例 / 不开混双行为不变」 | ✅ |
+| US-5.7 混双约束（可选） | preview `mixedDoubles`（**建局阶段开启**） | 引擎按性别组队（一男一女，UNKNOWN 视作可搭配）且**轮空时照顾性别配平**，违例数压到「轮空公平约束下的理论下界」；不可满足时 `metrics.mixedViolations` 报违例队数、前端明确提示并可换位调整；engine.test「4男4女→0 / 5男5女→0 / 5男4女 9 轮→下界 4 / 含 Guest 可配平→0 / 男男队在男生间均摊」 | ✅ |
+
+> 2026-09-16 分组引擎重写（评测驱动）：按「出场均衡（任意一轮散场都公平）→ 体力（连打/连续轮空）→ 不重复搭档与对阵 → 混双 → 实力差」的优先级重写 `engine.ts`，
+> 用 `backend/scripts/eval-engine.ts` 在 4485 个场景 × 5 个 seed 上量化评测、迭代 21 版，并经独立代码审查（12 条问题已修）。
+> 分组预览接口的 `participantIds` 新增上限 200（引擎在请求里同步计算）。完整评测报告、迭代记录、剩余未达标的取舍分析见
+> [`engine-eval/README.md`](./engine-eval/README.md)。分组预览页删掉了口径错误的「重复搭档 N 对 · 重复对手 N 对」一行（数字其实是重复次数之和，
+> 4 人打 6 轮会显示「重复对手 18 对」）；新增指标只在接口透出，页面不加信息。**未经真机 / 微信开发者工具验证**分组页展示。
 
 ## E6 对阵看板与计分
 | 故事 | 接口 | 测试/页面 | 状态 |
@@ -117,24 +123,27 @@
 ## 自动化测试结果
 
 ```
-pnpm --filter @badminton/backend test        # 全量（2026-07-14 实测全绿）
-  ✓ test/engine.test.ts (22 tests)  # 原 13 例 + 重复对手受控、混双×美式、UNKNOWN 性别混双、
-                                    #   非整除轮空公平、单打×美式、混双违例跨轮累计、seed 差异性
+pnpm --filter @badminton/backend test        # 全量（2026-09-16 实测全绿）
+  ✓ test/engine.test.ts (45 tests)  # 原 22 例 + 分组引擎评测回归 20 例（审计确认的 18 条缺陷 C0–C17 各至少一例、
+                                    #   墨式锁场地+轮空、积分部分缺失、轮次排序；断言在 seed 1..5 上都成立）
+                                    #   + 随机参数矩阵（结构/出场/逐轮轮空公平）+ 大规模耗时（含大量轮空）
   ✓ test/levels.test.ts (7 tests)   # shared 等级映射：权重单调、DEFAULT_LEVEL、未知值兜底
-  ✓ test/api.test.ts (9 tests)      # E1 登录+1:1；E2–E8 完整走查；R1 空 body 兜底；E3+ +1 物化；
+  ✓ test/api.test.ts (13 tests)     # E1 登录+1:1；E2–E8 完整走查；R1 空 body 兜底；E3+ +1 物化；
                                     #   G1 非局长 cancel/PATCH 403；G2 手动 promote；G3 报名幂等与 +1 容量；
                                     #   G4 候补严格队列；G5 开打守卫/Guest 守卫/二次 confirm 覆盖语义
+  ✓ test/roster.test.ts (8 tests)   # E9 开打后名单可变更（退出/归队/换人/重开一场）
   ✓ test/stats.test.ts (6 tests)    # 最佳搭档/难兄难弟/趋势/近局/胜率口径
-  Test Files  4 passed (4)
-       Tests  44 passed (44)
+  Test Files  5 passed (5)
+       Tests  79 passed (79)
 
-pnpm --filter @badminton/backend test:unit   # engine+levels，无需数据库（CI / pre-push 用）
-pnpm --filter @badminton/backend test:api    # api+stats，需本机 config.local.yml + dev 库
+pnpm --filter @badminton/backend test:unit   # engine+levels，无需数据库（CI / pre-push 用；引擎用例约 10s）
+pnpm --filter @badminton/backend test:api    # api+stats+roster，需本机 config.local.yml + dev 库
 
-pnpm --filter @badminton/frontend test       # 前端单测（2026-07-14 实测全绿）
+pnpm --filter @badminton/frontend test       # 前端单测（2026-09-16 实测全绿）
   ✓ test/format.test.ts             # cleanRemark 不碰钱红线全集（AA/费用/元/人 等逐分支）+ UTC→+8 格式化
   ✓ test/api.test.ts                # 非 GET 空 body 兜底 {}、401 清 token、ApiError 分支
-  Tests  30 passed (30)
+  Test Files  4 passed (4)
+       Tests  58 passed (58)
 ```
 
 CI：`.github/workflows/ci.yml` 每次 push master 跑 shared 构建 + 前端 typecheck/test + 后端构建/test:unit（留痕）；本地 pre-push 钩子（`scripts/git-hooks/`）跑同一套。

@@ -233,12 +233,22 @@ export interface ScheduleMetrics {
   appearancesMax: number;
   /** 平均每轮轮空人数 */
   byePerRound: number;
-  /** 重复搭档对数（越低越好） */
+  /** 重复搭档次数之和：同一对搭档第 2 次起每次计 1（不是「对数」，4 人打 6 轮可以大于总对数 6） */
   repeatPartnerPairs: number;
-  /** 重复对手对数 */
+  /** 重复对手次数之和：口径同上 */
   repeatOpponentPairs: number;
   /** 混双约束下「无法满足男女搭配」的队伍数（0 = 全部满足；仅 mixedDoubles 时有意义） */
   mixedViolations: number;
+  /** 最长连续上场轮数（无轮空时等于总轮数） */
+  maxConsecutivePlays: number;
+  /** 完全相同的对阵（同两队）再次出现的次数 */
+  sameMatchupRepeats: number;
+  /** 同一对搭档最多搭了几次 */
+  maxPartnerCount: number;
+  /** 同一对对手最多遇了几次 */
+  maxOpponentCount: number;
+  /** 平均两队实力差（权重单位） */
+  avgStrengthGap: number;
 }
 export interface GroupingScheduleVM {
   settings: GroupingSettings;

@@ -27,6 +27,9 @@ backend/uploads/
 logs/
 npm-debug.log*
 
+# 本地临时产物（截图、评测明细 JSON、历史版本引擎副本等），见 CLAUDE.md「临时截图放 .tmp/」
+.tmp/
+
 # env
 .env
 .env.*
